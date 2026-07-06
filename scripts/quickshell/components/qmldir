@@ -1,0 +1,5 @@
+module Components
+QsGlassPanel 1.0 QsGlassPanel.qml
+QsButton 1.0 QsButton.qml
+QsSlider 1.0 QsSlider.qml
+singleton QsDaemonClient 1.0 QsDaemonClient.qml

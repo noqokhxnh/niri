@@ -1,0 +1,1 @@
+lua/hyprland.lua
