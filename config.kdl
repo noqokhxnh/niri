@@ -86,7 +86,7 @@ window-rule {
 
 binds {
     // --- Basic Keybinds ---
-    Alt+F4 { close-window; }
+    Super+Q { close-window; }
     Super+Shift+F { toggle-window-floating; }
     
     // --- Window resizing ---
