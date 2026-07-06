@@ -190,7 +190,7 @@ binds {
     Super+Shift+9 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "9" "move"; }
     Super+Shift+0 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "10" "move"; }
     
-    Super+Tab { focus-monitor-next; }
+    Super+Tab { toggle-overview; }
 }
 
 spawn-at-startup "/usr/lib/polkit-kde-authentication-agent-1"
