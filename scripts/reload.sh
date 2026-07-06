@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# 1. Reload Hyprland configuration
-hyprctl reload
+# 1. Reload Niri configuration
+niri msg action reload-config
 
 # 2. Attempt to reload Quickshell via IPC (Soft Reload)
 SHELL_PATH="$HOME/.config/niri/scripts/quickshell/Shell.qml"
