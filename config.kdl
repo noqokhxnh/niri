@@ -1,0 +1,179 @@
+// Niri Config file for ~/.config/niri/config.kdl
+
+// Include the dynamically generated colors from Matugen
+include optional=true "colors.kdl"
+
+input {
+    keyboard {
+        xkb {
+            layout "us"
+        }
+    }
+    touchpad {
+        tap
+        natural-scroll
+        click-method "clickfinger"
+    }
+    mouse {
+        accel-speed 0.0
+    }
+    warp-mouse-to-focus
+    focus-follows-mouse max-threshold-cooldown-ms=100
+}
+
+output "eDP-1" {
+    mode "1920x1080@60"
+    scale 1.0
+    position x=0 y=0
+}
+
+output "HDMI-A-1" {
+    mode "3840x2160@30"
+    scale 1.0
+    position x=0 y=0
+}
+
+layout {
+    gaps 12
+    center-focused-column "never"
+    
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+    
+    default-column-width { proportion 0.5; }
+    
+    focus-ring {
+        width 4
+        active-color "#b7c4ffee"
+        inactive-color "#364479aa"
+    }
+}
+
+animations {
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    window-open {
+        spring damping-ratio=0.8 stiffness=800 epsilon=0.0001
+    }
+    window-close {
+        spring damping-ratio=0.8 stiffness=800 epsilon=0.0001
+    }
+    horizontal-view-movement {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    window-movement {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    window-resize {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+}
+
+window-rule {
+    match app-id=r#"^quickshell$"#
+    match title=r#"^quickshell$"#
+    open-floating true
+}
+
+window-rule {
+    geometry-corner-radius 12
+    clip-to-geometry true
+}
+
+binds {
+    // --- Basic Keybinds ---
+    Alt+F4 { close-window; }
+    Super+Shift+F { toggle-window-floating; }
+    
+    // --- Window resizing ---
+    Super+Shift+Left { set-column-width "-10%"; }
+    Super+Shift+Right { set-column-width "+10%"; }
+    Super+Shift+Up { set-window-height "-10%"; }
+    Super+Shift+Down { set-window-height "+10%"; }
+    
+    // --- Window movement ---
+    Super+Ctrl+Left { move-column-left; }
+    Super+Ctrl+Right { move-column-right; }
+    Super+Ctrl+Up { move-window-up-or-to-workspace-up; }
+    Super+Ctrl+Down { move-window-down-or-to-workspace-down; }
+    
+    // --- Focus movement ---
+    Super+Left { focus-column-left; }
+    Super+Right { focus-column-right; }
+    Super+Up { focus-window-or-monitor-up; }
+    Super+Down { focus-window-or-monitor-down; }
+    
+    // --- Application Launchers ---
+    Super+Return { spawn "kitty"; }
+    Super+F { spawn "firefox"; }
+    Super+E { spawn "nautilus"; }
+    
+    // --- Quickshell Panel Toggles ---
+    Super+R { spawn "bash" "/home/khxnh/.config/niri/scripts/reload.sh"; }
+    Super+C { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "clipboard"; }
+    Super+P { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "movies"; }
+    Super+Super_L { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "applauncher"; }
+    Super+Shift+S { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "settings"; }
+    Super+Q { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "music"; }
+    Super+B { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "battery"; }
+    Super+W { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "wallpaper"; }
+    Super+S { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "calendar"; }
+    Super+Shift+N { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "network"; }
+    Super+N { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "notes"; }
+    Super+Shift+T { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "focustime"; }
+    Super+V { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "volume"; }
+    Super+H { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "guide"; }
+    Super+D { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "services"; }
+    Super+M { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "monitors"; }
+    
+    // --- SwayOSD Controls ---
+    Caps_Lock { spawn "sleep" "0.1" "&&" "swayosd-client" "--caps-lock"; }
+    XF86MonBrightnessDown { spawn "swayosd-client" "--brightness" "lower"; }
+    XF86MonBrightnessUp { spawn "swayosd-client" "--brightness" "raise"; }
+    XF86AudioMicMute { spawn "swayosd-client" "--input-volume" "mute-toggle"; }
+    XF86AudioMute { spawn "swayosd-client" "--output-volume" "mute-toggle"; }
+    XF86AudioLowerVolume { spawn "swayosd-client" "--output-volume" "lower"; }
+    XF86AudioRaiseVolume { spawn "swayosd-client" "--output-volume" "raise"; }
+    
+    // --- Screenshot Controls ---
+    Print { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh"; }
+    Shift+Print { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh" "--edit"; }
+    Super+Print { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh" "--full"; }
+    Super+Shift+Print { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh" "--full" "--edit"; }
+    
+    // --- Lock and Media Controls ---
+    XF86PowerOff { spawn "bash" "/home/khxnh/.config/niri/scripts/lock.sh"; }
+    Super+L { spawn "bash" "/home/khxnh/.config/niri/scripts/lock.sh"; }
+    Super+Space { spawn "playerctl" "play-pause"; }
+    XF86AudioPause { spawn "playerctl" "play-pause"; }
+    XF86AudioPlay { spawn "playerctl" "play-pause"; }
+    
+    // --- Workspaces navigation & column move ---
+    Super+1 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "1"; }
+    Super+2 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "2"; }
+    Super+3 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "3"; }
+    Super+4 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "4"; }
+    Super+5 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "5"; }
+    Super+6 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "6"; }
+    Super+7 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "7"; }
+    Super+8 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "8"; }
+    Super+9 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "9"; }
+    Super+0 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "10"; }
+    
+    Super+Shift+1 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "1" "move"; }
+    Super+Shift+2 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "2" "move"; }
+    Super+Shift+3 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "3" "move"; }
+    Super+Shift+4 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "4" "move"; }
+    Super+Shift+5 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "5" "move"; }
+    Super+Shift+6 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "6" "move"; }
+    Super+Shift+7 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "7" "move"; }
+    Super+Shift+8 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "8" "move"; }
+    Super+Shift+9 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "9" "move"; }
+    Super+Shift+0 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "10" "move"; }
+    
+    Super+Tab { focus-monitor-next; }
+}

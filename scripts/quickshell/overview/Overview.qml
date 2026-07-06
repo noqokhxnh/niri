@@ -4,12 +4,14 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import Quickshell.Hyprland
 import "../"
 
 Variants {
     id: overviewVariants
     model: Quickshell.screens
+
+    property var workspacesData: []
+    property var windowsData: []
 
     delegate: Component {
         PanelWindow {
@@ -31,10 +33,32 @@ Variants {
                 right: true
             }
 
-            HyprlandFocusGrab {
-                id: grab
-                windows: [root]
-                active: Config.overviewOpen
+            ToplevelManager {
+                id: toplevelManager
+            }
+
+            Process {
+                id: niriWorkspacesProcess
+                command: ["niri", "msg", "-j", "workspaces"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            overviewVariants.workspacesData = JSON.parse(this.text.trim())
+                        } catch(e) {}
+                    }
+                }
+            }
+
+            Process {
+                id: niriWindowsProcess
+                command: ["niri", "msg", "-j", "windows"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        try {
+                            overviewVariants.windowsData = JSON.parse(this.text.trim())
+                        } catch(e) {}
+                    }
+                }
             }
 
             IpcHandler {
@@ -56,23 +80,8 @@ Variants {
                 Config.sh("echo " + (visible ? "1" : "0") + " > /tmp/overview_open")
                 if (visible) {
                     console.log("[Overview] Opened — refreshing data")
-                    Hyprland.refreshToplevels()
-                    Hyprland.refreshWorkspaces()
-                    refreshTimer.start()
-                }
-            }
-
-            // Delayed refresh to ensure data arrives
-            Timer {
-                id: refreshTimer
-                interval: 200
-                repeat: false
-                onTriggered: {
-                    Hyprland.refreshToplevels()
-                    Hyprland.refreshWorkspaces()
-                    let tlCount = Hyprland.toplevels.values ? Hyprland.toplevels.values.length : 0
-                    let wsCount = Hyprland.workspaces.values ? Hyprland.workspaces.values.length : 0
-                    console.log("[Overview] Refreshed: " + tlCount + " toplevels, " + wsCount + " workspaces, focused=" + (Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.id : "none"))
+                    niriWorkspacesProcess.running = true
+                    niriWindowsProcess.running = true
                 }
             }
 
@@ -83,17 +92,6 @@ Variants {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: Config.overviewOpen = false
-                }
-            }
-
-            Connections {
-                target: Hyprland
-                function onRawEvent(event) {
-                    let name = event.name || ""
-                    if (Config.overviewOpen && (name === "openwindow" || name === "closewindow" || name === "movewindow" || name === "workspace")) {
-                        Hyprland.refreshToplevels()
-                        Hyprland.refreshWorkspaces()
-                    }
                 }
             }
 
@@ -117,112 +115,124 @@ Variants {
                     } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_8) {
                         let ws = event.key - Qt.Key_0
                         Config.overviewOpen = false
-                        Config.sh("hyprctl dispatch 'hl.dsp.focus({ workspace = " + ws + " })'")
+                        Config.sh("niri msg action focus-workspace " + ws)
                         event.accepted = true
                     }
                 }
 
                 Column {
-                    anchors.centerIn: parent
-                    spacing: 30
+                    anchors.fill: parent
+                    anchors.margins: 40
+                    spacing: 20
 
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        text: "Workspaces"
+                        text: "Workspaces Overview"
                         font.family: "Outfit"
                         font.pixelSize: 28
                         font.weight: Font.Bold
                         color: mocha.text
                     }
 
-                    Grid {
-                        id: workspaceGrid
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        columns: Math.ceil(Config.workspaceCount / 2)
-                        rows: 2
-                        spacing: 20
+                    // Horizontal list of workspaces
+                    ListView {
+                        id: workspacesListView
+                        width: parent.width
+                        height: parent.height - 80
+                        orientation: ListView.Horizontal
+                        spacing: 24
+                        model: overviewVariants.workspacesData
 
-                        property real wsScale: 0.16
-                        property real wsWidth: root.screen.width * wsScale
-                        property real wsHeight: root.screen.height * wsScale
+                        delegate: Rectangle {
+                            id: wsBox
+                            required property var modelData
+                            property int workspaceId: modelData.id
+                            property bool isFocused: modelData.is_active || modelData.active
 
-                        Repeater {
-                            model: Config.workspaceCount
-                            delegate: Rectangle {
-                                id: wsBox
-                                property int workspaceId: index + 1
+                            width: root.screen.width * 0.38
+                            height: parent.height - 20
+                            radius: 16
 
-                                // Find the matching HyprlandWorkspace object using .values array
-                                property var hyprWs: {
-                                    let wsModel = Hyprland.workspaces
-                                    if (!wsModel) return null
-                                    // Try .values first (array access)
-                                    let arr = wsModel.values || []
-                                    for (let i = 0; i < arr.length; i++) {
-                                        if (arr[i] && arr[i].id === workspaceId) return arr[i]
-                                    }
-                                    // Fallback: try .count and .get()
-                                    if (typeof wsModel.count === 'number') {
-                                        for (let i = 0; i < wsModel.count; i++) {
-                                            let ws = wsModel.get(i)
-                                            if (ws && ws.id === workspaceId) return ws
+                            color: isFocused
+                                   ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.75)
+                                   : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.3)
+                            border.width: isFocused ? 2 : 1
+                            border.color: isFocused
+                                          ? mocha.mauve
+                                          : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.1)
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on border.color { ColorAnimation { duration: 150 } }
+
+                            Text {
+                                id: headerText
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.margins: 16
+                                text: "Workspace " + wsBox.workspaceId
+                                font.family: "Outfit"
+                                font.pixelSize: 20
+                                font.weight: Font.Bold
+                                color: wsBox.isFocused ? mocha.mauve : mocha.subtext0
+                                z: 10
+                            }
+
+                            // Horizontal scroll view of windows inside this workspace
+                            ListView {
+                                id: windowsListView
+                                anchors.top: headerText.bottom
+                                anchors.bottom: parent.bottom
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.margins: 16
+                                orientation: ListView.Horizontal
+                                spacing: 12
+                                model: {
+                                    let filtered = []
+                                    let winData = overviewVariants.windowsData || []
+                                    for (let i = 0; i < winData.length; i++) {
+                                        if (winData[i].workspace_id === wsBox.workspaceId) {
+                                            filtered.push(winData[i])
                                         }
                                     }
-                                    return null
+                                    return filtered
                                 }
 
-                                property bool isFocused: Hyprland.focusedWorkspace ? (Hyprland.focusedWorkspace.id === workspaceId) : false
+                                delegate: Item {
+                                    required property var modelData
+                                    width: wsBox.width * 0.44
+                                    height: parent.height - 10
 
-                                width: workspaceGrid.wsWidth
-                                height: workspaceGrid.wsHeight
-                                radius: 14
-
-                                color: isFocused
-                                       ? Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.7)
-                                       : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.3)
-                                border.width: isFocused ? 2 : 1
-                                border.color: isFocused
-                                              ? mocha.mauve
-                                              : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.1)
-
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                                Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                                Text {
-                                    anchors.left: parent.left
-                                    anchors.top: parent.top
-                                    anchors.margins: 12
-                                    text: wsBox.workspaceId
-                                    font.family: "Outfit"
-                                    font.pixelSize: 18
-                                    font.weight: Font.Bold
-                                    color: wsBox.isFocused ? mocha.mauve : mocha.subtext0
-                                    z: 10
-                                }
-
-                                // Use workspace-level toplevels via .values
-                                Repeater {
-                                    model: {
-                                        if (wsBox.hyprWs && wsBox.hyprWs.toplevels) {
-                                            return wsBox.hyprWs.toplevels.values || []
+                                    OverviewWindow {
+                                        anchors.fill: parent
+                                        wsScale: 1.0
+                                        screenX: 0
+                                        screenY: 0
+                                        title: modelData.title || "Window"
+                                        appId: modelData.app_id || ""
+                                        isFocused: modelData.is_focused || false
+                                        toplevel: {
+                                            let win = modelData
+                                            let arr = toplevelManager.toplevels
+                                            if (!arr) return null
+                                            for (let j = 0; j < arr.count; j++) {
+                                                let tl = arr.get(j)
+                                                if (tl && tl.title === win.title && tl.appId === win.app_id) {
+                                                    return tl
+                                                }
+                                            }
+                                            return null
                                         }
-                                        return []
-                                    }
-                                    delegate: OverviewWindow {
-                                        required property var modelData
-                                        toplevel: modelData
-                                        wsScale: workspaceGrid.wsScale
-                                        screenX: root.screen.x
-                                        screenY: root.screen.y
                                     }
                                 }
+                            }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: {
-                                        Config.overviewOpen = false
-                                        Config.sh("hyprctl dispatch 'hl.dsp.focus({ workspace = " + wsBox.workspaceId + " })'")
-                                    }
+                            MouseArea {
+                                anchors.fill: parent
+                                z: -1
+                                onClicked: {
+                                    Config.overviewOpen = false
+                                    Config.sh("niri msg action focus-workspace " + wsBox.workspaceId)
                                 }
                             }
                         }

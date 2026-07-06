@@ -12,7 +12,7 @@ Item {
     // Core Paths & Environment
     // =========================================================================
     readonly property string homeDir: Quickshell.env("HOME")
-    readonly property string hyprDir: homeDir + "/.config/hypr"
+    readonly property string hyprDir: homeDir + "/.config/niri"
     readonly property string qsScriptsDir: hyprDir + "/scripts/quickshell"
     readonly property string cacheDir: paths.cacheDir
     
@@ -184,7 +184,7 @@ Item {
 
     function applyControlCenterSettings() {
         saveAppSettings();
-        sh("hyprctl reload");
+        sh("niri msg action reload-config");
     }
 
     function saveWeatherConfig() {
@@ -285,65 +285,61 @@ Item {
 
     function applyMonitors() {
         if (monitorsModel.count === 0) return;
-        if (monitorsModel.count === 1) {
-            let m = monitorsModel.get(0);
-            let monitorStr = m.name + "," + m.resW + "x" + m.resH + "@" + m.rate + ",0x0," + m.sysScale;
-            if (m.transform !== 0) monitorStr += ",transform," + m.transform;
-            let jsonArr = [{ name: m.name, resW: m.resW, resH: m.resH, rate: parseInt(m.rate), x: 0, y: 0, scale: m.sysScale, transform: m.transform }];
-            config.setSetting("monitors", jsonArr);
-            config.sh("hyprctl keyword monitor " + monitorStr + " ; awww kill ; sleep 0.2 ; awww-daemon &");
-            Quickshell.execDetached(["notify-send", "Display Update", "Applied: " + m.resW + "x" + m.resH + " @ " + m.rate + "Hz"]);
-        } else {
-            let rects = [];
-            for (let i = 0; i < monitorsModel.count; i++) {
-                let m = monitorsModel.get(i);
-                let isP = m.transform === 1 || m.transform === 3;
-                let physW = Math.round((isP ? m.resH : m.resW) / m.sysScale);
-                let physH = Math.round((isP ? m.resW : m.resH) / m.sysScale);
-                rects.push({ x: m.uiX / config.monUiScale, y: m.uiY / config.monUiScale, w: physW, h: physH, resW: m.resW, resH: m.resH, name: m.name, rate: m.rate, sysScale: m.sysScale, transform: m.transform });
-            }
-            function getTightSnap(pX, pY, sX, sY, sW, sH, mW, mH, t) {
-                let cx = pX; let cy = pY;
-                if (Math.abs(cx - (sX - mW)) < t) cx = sX - mW;
-                else if (Math.abs(cx - (sX + sW)) < t) cx = sX + sW;
-                else if (Math.abs(cx - sX) < t) cx = sX;
-                else if (Math.abs(cx - (sX + sW - mW)) < t) cx = sX + sW - mW;
-                if (Math.abs(cy - (sY - mH)) < t) cy = sY - mH;
-                else if (Math.abs(cy - (sY + sH)) < t) cy = sY + sH;
-                else if (Math.abs(cy - sY) < t) cy = sY;
-                else if (Math.abs(cy - (sY + sH - mH)) < t) cy = sY + sH - mH;
-                return {x: cx, y: cy};
-            }
-            for (let i = 1; i < rects.length; i++) {
-                let bestX = rects[i].x, bestY = rects[i].y, bestDist = 999999;
-                for (let j = 0; j < i; j++) {
-                    let r0 = rects[j];
-                    let snapped = getTightSnap(rects[i].x, rects[i].y, r0.x, r0.y, r0.w, r0.h, rects[i].w, rects[i].h, 25);
-                    let dist = Math.hypot(rects[i].x - snapped.x, rects[i].y - snapped.y);
-                    if (dist < bestDist) { bestDist = dist; bestX = Math.round(snapped.x); bestY = Math.round(snapped.y); }
-                }
-                rects[i].x = bestX; rects[i].y = bestY;
-            }
-            let finalMinX = 999999, finalMinY = 999999;
-            for (let i = 0; i < rects.length; i++) {
-                if (rects[i].x < finalMinX) finalMinX = rects[i].x;
-                if (rects[i].y < finalMinY) finalMinY = rects[i].y;
-            }
-            let batchCmds = [], summaryString = "", jsonArr = [];
-            for (let i = 0; i < rects.length; i++) {
-                let r = rects[i];
-                r.x = Math.round(r.x - finalMinX);
-                r.y = Math.round(r.y - finalMinY);
-                let monitorStr = r.name + "," + r.resW + "x" + r.resH + "@" + r.rate + "," + r.x + "x" + r.y + "," + r.sysScale;
-                if (r.transform !== 0) monitorStr += ",transform," + r.transform;
-                batchCmds.push("keyword monitor " + monitorStr);
-                summaryString += r.name + " ";
-                jsonArr.push({ name: r.name, resW: r.resW, resH: r.resH, rate: parseInt(r.rate), x: r.x, y: r.y, scale: r.sysScale, transform: r.transform });
-            }
-            config.setSetting("monitors", jsonArr);
-            config.sh("hyprctl --batch '" + batchCmds.join(" ; ") + "' ; awww kill ; sleep 0.2 ; awww-daemon &");
-            Quickshell.execDetached(["notify-send", "Display Update", "Applied layout for: " + summaryString.trim()]);
+        let rects = [];
+        for (let i = 0; i < monitorsModel.count; i++) {
+            let m = monitorsModel.get(i);
+            let isP = m.transform === 1 || m.transform === 3;
+            let physW = Math.round((isP ? m.resH : m.resW) / m.sysScale);
+            let physH = Math.round((isP ? m.resW : m.resH) / m.sysScale);
+            rects.push({ x: m.uiX / config.monUiScale, y: m.uiY / config.monUiScale, w: physW, h: physH, resW: m.resW, resH: m.resH, name: m.name, rate: m.rate, sysScale: m.sysScale, transform: m.transform });
         }
+        function getTightSnap(pX, pY, sX, sY, sW, sH, mW, mH, t) {
+            let cx = pX; let cy = pY;
+            if (Math.abs(cx - (sX - mW)) < t) cx = sX - mW;
+            else if (Math.abs(cx - (sX + sW)) < t) cx = sX + sW;
+            else if (Math.abs(cx - sX) < t) cx = sX;
+            else if (Math.abs(cx - (sX + sW - mW)) < t) cx = sX + sW - mW;
+            if (Math.abs(cy - (sY - mH)) < t) cy = sY - mH;
+            else if (Math.abs(cy - (sY + sH)) < t) cy = sY + sH;
+            else if (Math.abs(cy - sY) < t) cy = sY;
+            else if (Math.abs(cy - (sY + sH - mH)) < t) cy = sY + sH - mH;
+            return {x: cx, y: cy};
+        }
+        for (let i = 1; i < rects.length; i++) {
+            let bestX = rects[i].x, bestY = rects[i].y, bestDist = 999999;
+            for (let j = 0; j < i; j++) {
+                let r0 = rects[j];
+                let snapped = getTightSnap(rects[i].x, rects[i].y, r0.x, r0.y, r0.w, r0.h, rects[i].w, rects[i].h, 25);
+                let dist = Math.hypot(rects[i].x - snapped.x, rects[i].y - snapped.y);
+                if (dist < bestDist) { bestDist = dist; bestX = Math.round(snapped.x); bestY = Math.round(snapped.y); }
+            }
+            rects[i].x = bestX; rects[i].y = bestY;
+        }
+        let finalMinX = 999999, finalMinY = 999999;
+        for (let i = 0; i < rects.length; i++) {
+            if (rects[i].x < finalMinX) finalMinX = rects[i].x;
+            if (rects[i].y < finalMinY) finalMinY = rects[i].y;
+        }
+        let wlrCmds = [], summaryString = "", jsonArr = [];
+        for (let i = 0; i < rects.length; i++) {
+            let r = rects[i];
+            r.x = Math.round(r.x - finalMinX);
+            r.y = Math.round(r.y - finalMinY);
+            let cmd = "wlr-randr --output " + r.name + " --mode " + r.resW + "x" + r.resH + "@" + r.rate + " --pos " + r.x + "," + r.y + " --scale " + r.sysScale;
+            if (r.transform !== 0) {
+                let transformStr = "normal";
+                if (r.transform === 1) transformStr = "90";
+                else if (r.transform === 2) transformStr = "180";
+                else if (r.transform === 3) transformStr = "270";
+                cmd += " --transform " + transformStr;
+            }
+            wlrCmds.push(cmd);
+            summaryString += r.name + " ";
+            jsonArr.push({ name: r.name, resW: r.resW, resH: r.resH, rate: parseInt(r.rate), x: r.x, y: r.y, scale: r.sysScale, transform: r.transform });
+        }
+        config.setSetting("monitors", jsonArr);
+        config.sh(wlrCmds.join(" && ") + " ; awww kill ; sleep 0.2 ; awww-daemon &");
+        Quickshell.execDetached(["notify-send", "Display Update", "Applied layout for: " + summaryString.trim()]);
     }
 
     property alias monDelayedLayoutUpdate: _monDelayedLayoutUpdate
@@ -356,32 +352,73 @@ Item {
     property alias displayPoller: _displayPoller
     Process {
         id: _displayPoller
-        command: ["hyprctl", "monitors", "-j"]
+        command: ["niri", "msg", "-j", "outputs"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    let data = JSON.parse(this.text.trim());
+                    let rawData = JSON.parse(this.text.trim());
                     config.monitorsModel.clear();
+                    
+                    let data = [];
+                    if (Array.isArray(rawData)) {
+                        data = rawData;
+                    } else if (typeof rawData === "object" && rawData !== null) {
+                        for (let name in rawData) {
+                            let obj = rawData[name];
+                            obj.name = name;
+                            data.push(obj);
+                        }
+                    }
+
                     let minX = 999999, minY = 999999;
                     for (let i = 0; i < data.length; i++) {
-                        if (data[i].x < minX) minX = data[i].x;
-                        if (data[i].y < minY) minY = data[i].y;
+                        let x = data[i].logical ? data[i].logical.x : 0;
+                        let y = data[i].logical ? data[i].logical.y : 0;
+                        if (x < minX) minX = x;
+                        if (y < minY) minY = y;
                     }
                     config.monOriginalOriginX = minX !== 999999 ? minX : 0;
                     config.monOriginalOriginY = minY !== 999999 ? minY : 0;
                     for (let i = 0; i < data.length; i++) {
-                        let scl = data[i].scale !== undefined ? data[i].scale : 1.0;
-                        let tf = data[i].transform !== undefined ? data[i].transform : 0;
-                        let normalizedX = (data[i].x - minX) * config.monUiScale;
-                        let normalizedY = (data[i].y - minY) * config.monUiScale;
+                        let m = data[i];
+                        let name = m.name || "";
+                        let logical = m.logical || {};
+                        let current_mode = m.current_mode || {};
+                        let modes = m.modes || [];
+                        
+                        let x = logical.x !== undefined ? logical.x : 0;
+                        let y = logical.y !== undefined ? logical.y : 0;
+                        let scl = logical.scale !== undefined ? logical.scale : 1.0;
+                        
+                        let resW = current_mode.width !== undefined ? current_mode.width : (m.width || 1920);
+                        let resH = current_mode.height !== undefined ? current_mode.height : (m.height || 1080);
+                        let rate = current_mode.refresh !== undefined ? Math.round(current_mode.refresh).toString() : "60";
+                        
+                        let tf = m.transform !== undefined ? m.transform : 0;
+                        if (typeof tf === "string") {
+                            if (tf === "90") tf = 1;
+                            else if (tf === "180") tf = 2;
+                            else if (tf === "270") tf = 3;
+                            else tf = 0;
+                        }
+                        
+                        let normalizedX = (x - minX) * config.monUiScale;
+                        let normalizedY = (y - minY) * config.monUiScale;
+                        
+                        let availableModesList = [];
+                        for (let j = 0; j < modes.length; j++) {
+                            let modeStr = modes[j].width + "x" + modes[j].height + "@" + Math.round(modes[j].refresh);
+                            availableModesList.push(modeStr);
+                        }
+
                         config.monitorsModel.append({
-                            name: data[i].name, resW: data[i].width, resH: data[i].height,
-                            sysScale: scl, rate: Math.round(data[i].refreshRate).toString(),
+                            name: name, resW: resW, resH: resH,
+                            sysScale: scl, rate: rate,
                             uiX: normalizedX, uiY: normalizedY, transform: tf,
-                            availableModes: JSON.stringify(data[i].availableModes || [])
+                            availableModes: JSON.stringify(availableModesList)
                         });
-                        if (data[i].focused) config.monActiveEditIndex = i;
+                        if (m.is_focused || m.focused) config.monActiveEditIndex = i;
                     }
                     config.monForceLayoutUpdate();
                 } catch(e) {}

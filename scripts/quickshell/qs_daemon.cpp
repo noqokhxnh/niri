@@ -760,9 +760,9 @@ public:
         run_dir = std::getenv("QS_RUN_FOCUSTIME") ? std::getenv("QS_RUN_FOCUSTIME") : "/tmp/quickshell/focustime";
         fs::create_directories(run_dir);
 
-        // Start Hyprland listener socket thread
+        // Start Niri listener socket thread
         std::thread([this]() {
-            this->runHyprlandListener();
+            this->runNiriListener();
         }).detach();
 
         // Start logging logic timer
@@ -1061,12 +1061,18 @@ private:
     }
 
     std::string get_active_window_info() {
-        return exec_cmd_sync("hyprctl activewindow -j");
+        return exec_cmd_sync("niri msg --json windows");
     }
 
     void update_active_window() {
+        if (is_locked()) {
+            std::lock_guard<std::mutex> lock(state_mutex);
+            current_class = "Locked";
+            current_title = "Locked";
+            return;
+        }
         std::string info_json = get_active_window_info();
-        if (info_json == "{}" || info_json.empty()) {
+        if (info_json.empty() || info_json == "[]" || info_json == "null") {
             std::lock_guard<std::mutex> lock(state_mutex);
             current_class = "Desktop";
             current_title = "Desktop";
@@ -1074,19 +1080,36 @@ private:
         }
         try {
             auto data = json::parse(info_json);
-            std::string cls = data.value("initialClass", data.value("class", "Unknown"));
-            std::string title = data.value("initialTitle", data.value("title", "Unknown"));
-            
-            if (cls.find("quickshell") != std::string::npos) {
-                cls = "Quickshell";
-                title = "Quickshell";
+            if (data.is_array()) {
+                bool found = false;
+                for (auto& item : data) {
+                    if (item.value("is_focused", false)) {
+                        std::string cls = item.value("app_id", "Unknown");
+                        std::string title = item.value("title", "Unknown");
+                        
+                        if (cls.find("quickshell") != std::string::npos) {
+                            cls = "Quickshell";
+                            title = "Quickshell";
+                        }
+                        std::string clean_title = focus_common::resolve_app_name(cls, title);
+                        
+                        std::lock_guard<std::mutex> lock(state_mutex);
+                        current_class = cls;
+                        current_title = clean_title;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    std::lock_guard<std::mutex> lock(state_mutex);
+                    current_class = "Desktop";
+                    current_title = "Desktop";
+                }
+            } else {
+                std::lock_guard<std::mutex> lock(state_mutex);
+                current_class = "Desktop";
+                current_title = "Desktop";
             }
-
-            std::string clean_title = focus_common::resolve_app_name(cls, title);
-            
-            std::lock_guard<std::mutex> lock(state_mutex);
-            current_class = cls;
-            current_title = clean_title;
         } catch (...) {
             std::lock_guard<std::mutex> lock(state_mutex);
             current_class = "Unknown";
@@ -1095,19 +1118,14 @@ private:
     }
 
     bool is_locked() {
-        return system("pgrep -x hyprlock > /dev/null") == 0;
+        return system("pgrep -f Lock.qml > /dev/null") == 0;
     }
 
-    void runHyprlandListener() {
-        const char* hypr_sig = std::getenv("HYPRLAND_INSTANCE_SIGNATURE");
-        if (!hypr_sig) return;
+    void runNiriListener() {
+        const char* niri_socket = std::getenv("NIRI_SOCKET");
+        if (!niri_socket) return;
 
-        std::string sock_path = "/tmp/hypr/" + std::string(hypr_sig) + "/.socket2.sock";
-        const char* xdg_runtime = std::getenv("XDG_RUNTIME_DIR");
-        if (xdg_runtime) {
-            std::string alt_path = std::string(xdg_runtime) + "/hypr/" + std::string(hypr_sig) + "/.socket2.sock";
-            if (fs::exists(alt_path)) sock_path = alt_path;
-        }
+        std::string sock_path = niri_socket;
 
         while (true) {
             int sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -1124,56 +1142,38 @@ private:
                 continue;
             }
 
+            // Start the event stream
+            std::string req = "\"EventStream\"\n";
+            if (send(sock, req.c_str(), req.length(), 0) < 0) {
+                close(sock);
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+                continue;
+            }
+
             char buffer[4096];
+            std::string stream_data = "";
             while (true) {
                 ssize_t n = recv(sock, buffer, sizeof(buffer) - 1, 0);
                 if (n <= 0) break;
                 buffer[n] = '\0';
-                std::string data(buffer);
-                
-                size_t active_pos = data.find("activewindow>>");
-                if (active_pos != std::string::npos) {
-                    if (is_locked()) {
-                        std::lock_guard<std::mutex> lock(state_mutex);
-                        current_class = "Locked";
-                        current_title = "Locked";
-                    } else {
-                        // Extract the line containing activewindow>>
-                        size_t end_line = data.find('\n', active_pos);
-                        std::string line = (end_line == std::string::npos) ? 
-                                           data.substr(active_pos) : 
-                                           data.substr(active_pos, end_line - active_pos);
-                        
-                        // line is "activewindow>>class,title"
-                        std::string payload = line.substr(14); // length of "activewindow>>"
-                        size_t comma = payload.find(',');
-                        if (comma != std::string::npos) {
-                            std::string cls = payload.substr(0, comma);
-                            std::string title = payload.substr(comma + 1);
-                            
-                            if (cls.empty()) {
-                                std::lock_guard<std::mutex> lock(state_mutex);
-                                current_class = "Desktop";
-                                current_title = "Desktop";
-                            } else {
-                                if (cls.find("quickshell") != std::string::npos) {
-                                    cls = "Quickshell";
-                                    title = "Quickshell";
-                                }
-                                std::string clean_title = focus_common::resolve_app_name(cls, title);
-                                
-                                std::lock_guard<std::mutex> lock(state_mutex);
-                                current_class = cls;
-                                current_title = clean_title;
-                            }
-                        } else {
-                            // Fallback in case of unexpected format
+                stream_data += buffer;
+
+                size_t pos;
+                while ((pos = stream_data.find('\n')) != std::string::npos) {
+                    std::string line = stream_data.substr(0, pos);
+                    stream_data.erase(0, pos + 1);
+                    if (!line.empty()) {
+                        // Check if the event signifies a focus change or window change
+                        if (line.find("WindowFocusChanged") != std::string::npos ||
+                            line.find("WindowOpenedOrChanged") != std::string::npos ||
+                            line.find("WorkspaceActivated") != std::string::npos) {
                             update_active_window();
                         }
                     }
                 }
             }
             close(sock);
+            std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
 

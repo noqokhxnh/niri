@@ -3,7 +3,6 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
-import Quickshell.Hyprland
 import "../"
 
 Item {
@@ -14,18 +13,11 @@ Item {
     required property real screenY
 
     property var toplevel: null
+    property string title: ""
+    property string appId: ""
+    property bool isFocused: false
 
-    // Position from Hyprland IPC data
-    property var ipcObj: toplevel ? toplevel.lastIpcObject : null
-    property var atPos: ipcObj ? ipcObj.at : null
-    property var sizeVal: ipcObj ? ipcObj.size : null
-
-    x: atPos ? Math.max(0, (atPos[0] - screenX) * wsScale) : 0
-    y: atPos ? Math.max(0, (atPos[1] - screenY) * wsScale) : 0
-    width: sizeVal ? Math.min(sizeVal[0] * wsScale, parent ? parent.width - x : 200) : 0
-    height: sizeVal ? Math.min(sizeVal[1] * wsScale, parent ? parent.height - y : 200) : 0
-
-    visible: width > 2 && height > 2
+    anchors.fill: parent
 
     MatugenColors { id: mocha }
 
@@ -34,14 +26,14 @@ Item {
         anchors.fill: parent
         color: Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.85)
         radius: 8
-        border.width: (toplevel && toplevel.activated) ? 2 : 1
-        border.color: (toplevel && toplevel.activated) ? mocha.mauve : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15)
+        border.width: isFocused ? 2 : 1
+        border.color: isFocused ? mocha.mauve : Qt.rgba(mocha.text.r, mocha.text.g, mocha.text.b, 0.15)
         clip: true
 
         ScreencopyView {
             anchors.fill: parent
             anchors.margins: 1
-            captureSource: (toplevel && toplevel.wayland) ? toplevel.wayland : null
+            captureSource: toplevel
             live: Config.overviewOpen
         }
 
@@ -70,9 +62,7 @@ Item {
                     height: 12
                     anchors.verticalCenter: parent.verticalCenter
                     source: {
-                        if (!toplevel) return ""
-                        let cls = (toplevel.lastIpcObject && toplevel.lastIpcObject.class) ? toplevel.lastIpcObject.class : (toplevel.wayland ? toplevel.wayland.appId : "")
-                        let iconName = getIconForAppId(cls)
+                        let iconName = getIconForAppId(appId)
                         return Quickshell.iconPath(iconName) || ""
                     }
                     fillMode: Image.PreserveAspectFit
@@ -81,7 +71,7 @@ Item {
                 Text {
                     width: parent.width - 20
                     anchors.verticalCenter: parent.verticalCenter
-                    text: (toplevel && toplevel.title) ? toplevel.title : "Window"
+                    text: title || "Window"
                     font.family: "Outfit"
                     font.pixelSize: 9
                     color: mocha.text
@@ -113,7 +103,7 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 onClicked: {
-                    if (toplevel && toplevel.wayland) toplevel.wayland.close()
+                    if (toplevel) toplevel.close()
                 }
             }
         }
@@ -126,16 +116,19 @@ Item {
         acceptedButtons: Qt.LeftButton
 
         onClicked: {
-            if (toplevel && toplevel.wayland) {
+            if (toplevel) {
                 Config.overviewOpen = false
-                toplevel.wayland.activate()
+                toplevel.activate()
+            } else {
+                Config.overviewOpen = false
+                Config.sh("niri msg action focus-window --id " + modelData.id)
             }
         }
     }
 
-    function getIconForAppId(appId) {
-        if (!appId) return "application-x-executable";
-        let lower = appId.toLowerCase();
+    function getIconForAppId(idStr) {
+        if (!idStr) return "application-x-executable";
+        let lower = idStr.toLowerCase();
         if (lower.includes("brave")) return "brave-browser";
         if (lower.includes("chrome")) return "google-chrome";
         if (lower.includes("firefox")) return "firefox";
@@ -150,6 +143,6 @@ Item {
         if (lower.includes("steam")) return "steam";
         if (lower.includes("obsidian")) return "obsidian";
         if (lower.includes("telegram")) return "telegram";
-        return appId;
+        return idStr;
     }
 }

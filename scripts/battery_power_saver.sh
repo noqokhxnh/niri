@@ -15,7 +15,7 @@ echo "$$" > "$LOCKFILE"
 trap 'rm -f "$LOCKFILE"; exit' INT TERM EXIT
 
 # Config and state files
-SETTINGS_FILE="$HOME/.config/hypr/settings.json"
+SETTINGS_FILE="$HOME/.config/niri/settings.json"
 PREV_AUTO_POWER_FILE="/tmp/battery_saver_prev_auto_power_mode"
 PREV_BRIGHTNESS_FILE="/tmp/battery_saver_prev_brightness"
 PREV_KBD_FILE="/tmp/battery_saver_prev_kbd"
@@ -53,9 +53,9 @@ update_setting_str() {
 
 get_monitor_info() {
     # Find internal display name (typically matches eDP-* or LVDS-*)
-    local monitor=$(hyprctl monitors -j | jq -r '.[] | select(.name | startswith("eDP-") or startswith("LVDS-")) | .name' | head -n1)
+    local monitor=$(wlr-randr | grep -oE '^(eDP-[0-9]+|LVDS-[0-9]+)' | head -n1)
     if [ -z "$monitor" ]; then
-        monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused==true) | .name' | head -n1)
+        monitor=$(wlr-randr | grep -B1 'Enabled: yes' | grep -oE '^[a-zA-Z0-9-]+' | head -n1)
     fi
     echo "$monitor"
 }
@@ -76,27 +76,20 @@ apply_power_saving() {
     powerprofilesctl set power-saver
     update_setting_str "powerProfile" "power-saver"
 
-    # 3. Disable animations and blur in Hyprland using Lua API via hyprctl eval
-    hyprctl eval "hl.config({ animations = { enabled = false } })"
-    hyprctl eval "hl.config({ decoration = { blur = { enabled = false } } })"
+    # 3. Disable animations in Niri
+    niri msg action disable-animations
 
     # 4. Reduce refresh rate of the internal display to the lowest supported
     local mon=$(get_monitor_info)
     if [ -n "$mon" ]; then
-        local mon_info=$(hyprctl monitors -j | jq -r --arg mon "$mon" '.[] | select(.name==$mon)')
-        if [ -n "$mon_info" ]; then
-            local width=$(echo "$mon_info" | jq -r '.width')
-            local height=$(echo "$mon_info" | jq -r '.height')
-            local x=$(echo "$mon_info" | jq -r '.x')
-            local y=$(echo "$mon_info" | jq -r '.y')
-            local scale=$(echo "$mon_info" | jq -r '.scale')
-            local transform=$(echo "$mon_info" | jq -r '.transform')
-            # Extract lowest refresh rate
-            local rates=($(echo "$mon_info" | jq -r --arg res "${width}x${height}@" '.availableModes[] | select(startswith($res))' | sed -E 's/.*@([0-9.]+).*/\1/' | sort -n))
+        local current_res=$(wlr-randr --output "$mon" | grep 'current' | awk '{print $1}')
+        if [ -n "$current_res" ]; then
+            # Extract all rates for that resolution
+            local rates=($(wlr-randr --output "$mon" | grep "$current_res" | grep -oE '[0-9]+\.[0-9]+' | sort -n))
             if [ ${#rates[@]} -gt 0 ]; then
                 local low_rate=${rates[0]}
                 echo "[Battery Saver] Setting $mon refresh rate to ${low_rate}Hz"
-                hyprctl eval "hl.monitor({ output = '$mon', mode = '${width}x${height}@${low_rate}', position = '${x}x${y}', scale = ${scale}, transform = ${transform} })"
+                wlr-randr --output "$mon" --mode "${current_res}@${low_rate}"
             fi
         fi
     fi
@@ -140,27 +133,20 @@ apply_performance() {
     powerprofilesctl set balanced
     update_setting_str "powerProfile" "balanced"
 
-    # 3. Enable animations and blur in Hyprland using Lua API via hyprctl eval
-    hyprctl eval "hl.config({ animations = { enabled = true } })"
-    hyprctl eval "hl.config({ decoration = { blur = { enabled = true } } })"
+    # 3. Enable animations in Niri
+    niri msg action enable-animations
 
     # 4. Restore refresh rate of the internal display to the highest supported
     local mon=$(get_monitor_info)
     if [ -n "$mon" ]; then
-        local mon_info=$(hyprctl monitors -j | jq -r --arg mon "$mon" '.[] | select(.name==$mon)')
-        if [ -n "$mon_info" ]; then
-            local width=$(echo "$mon_info" | jq -r '.width')
-            local height=$(echo "$mon_info" | jq -r '.height')
-            local x=$(echo "$mon_info" | jq -r '.x')
-            local y=$(echo "$mon_info" | jq -r '.y')
-            local scale=$(echo "$mon_info" | jq -r '.scale')
-            local transform=$(echo "$mon_info" | jq -r '.transform')
+        local current_res=$(wlr-randr --output "$mon" | grep 'current' | awk '{print $1}')
+        if [ -n "$current_res" ]; then
             # Extract highest refresh rate
-            local rates=($(echo "$mon_info" | jq -r --arg res "${width}x${height}@" '.availableModes[] | select(startswith($res))' | sed -E 's/.*@([0-9.]+).*/\1/' | sort -rn))
+            local rates=($(wlr-randr --output "$mon" | grep "$current_res" | grep -oE '[0-9]+\.[0-9]+' | sort -rn))
             if [ ${#rates[@]} -gt 0 ]; then
                 local high_rate=${rates[0]}
                 echo "[Battery Saver] Restoring $mon refresh rate to ${high_rate}Hz"
-                hyprctl eval "hl.monitor({ output = '$mon', mode = '${width}x${height}@${high_rate}', position = '${x}x${y}', scale = ${scale}, transform = ${transform} })"
+                wlr-randr --output "$mon" --mode "${current_res}@${high_rate}"
             fi
         fi
     fi

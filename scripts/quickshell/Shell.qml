@@ -28,13 +28,13 @@ ShellRoot {
 
     Process {
         id: wsDaemon
-        command: ["bash", "-c", "~/.config/hypr/scripts/workspaces.sh"]
+        command: ["bash", "-c", "~/.config/niri/scripts/workspaces.sh"]
         running: false
     }
 
     Process {
         id: qsDaemon
-        command: [Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/qs_daemon"]
+        command: [Quickshell.env("HOME") + "/.config/niri/scripts/quickshell/qs_daemon"]
         running: false
         onExited: (exitCode) => {
             console.log("qs_daemon exited with code: " + exitCode + ". Restarting...")

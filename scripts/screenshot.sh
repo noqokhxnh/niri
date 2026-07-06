@@ -74,7 +74,7 @@ FULL_MODE=false
 RECORD_MODE=false
 SCAN_QR_MODE=false
 
-SETTINGS_FILE="$HOME/.config/hypr/settings.json"
+SETTINGS_FILE="$HOME/.config/niri/settings.json"
 if [ -f "$SETTINGS_FILE" ] && command -v jq &>/dev/null; then
     VAL=$(jq -r '.beautifyScreenshot' "$SETTINGS_FILE" 2>/dev/null)
     if [ "$VAL" = "false" ]; then
@@ -326,7 +326,7 @@ if [ "$FULL_MODE" = true ] || [ -n "$GEOMETRY" ]; then
         exit 0
     fi
 
-    SCALE_FACTOR=$(hyprctl monitors 2>/dev/null | grep -m1 "scale:" | awk '{print $2}' || echo 1)
+    SCALE_FACTOR=$(niri msg -j outputs 2>/dev/null | jq -r '.[0].scale // .[].scale' | head -n1 || echo 1)
     GRIM_CMD="grim -s $SCALE_FACTOR -l 0"
     if [ -n "$GEOMETRY" ]; then
         # Ensure geometry is treated as a single argument if passed from QML
@@ -381,7 +381,7 @@ fi
 # ---------------------------------------------------------
 # PHASE 2: UI Trigger (Launch Standalone Quickshell Overlay)
 # ---------------------------------------------------------
-QML_PATH="$HOME/.config/hypr/scripts/quickshell/ScreenshotOverlay.qml"
+QML_PATH="$HOME/.config/niri/scripts/quickshell/ScreenshotOverlay.qml"
 
 if pgrep -f "quickshell -p $QML_PATH" > /dev/null; then
     pkill -f "quickshell -p $QML_PATH"

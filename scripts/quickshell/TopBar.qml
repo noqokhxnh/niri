@@ -784,9 +784,9 @@ Variants {
                         anchors.fill: parent
                         onWheel: (wheel) => {
                             if (wheel.angleDelta.y > 0) {
-                                Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ workspace = 'm-1' })"]);
+                                Quickshell.execDetached(["niri", "msg", "action", "focus-workspace-up"]);
                             } else if (wheel.angleDelta.y < 0) {
-                                Quickshell.execDetached(["hyprctl", "dispatch", "hl.dsp.focus({ workspace = 'm+1' })"]);
+                                Quickshell.execDetached(["niri", "msg", "action", "focus-workspace-down"]);
                             }
                         }
                     }
@@ -1452,7 +1452,7 @@ Variants {
                                     Text { anchors.verticalCenter: parent.verticalCenter; text: "󰌌"; font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16); color: parent.parent.isHovered ? mocha.text : mocha.overlay2 }
                                     Text { anchors.verticalCenter: parent.verticalCenter; text: barWindow.kbLayout; font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black; color: mocha.text }
                                 }
-                                MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["hyprctl", "switchxkblayout", "main", "next"]) }
+                                MouseArea { id: kbMouse; anchors.fill: parent; hoverEnabled: true; onClicked: Quickshell.execDetached(["niri", "msg", "action", "switch-layout", "next"]) }
                             }
 
                             Rectangle {
