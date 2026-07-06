@@ -187,7 +187,6 @@ Item {
                             ListElement { name: "Volume"; icon: "󰕾"; target: "volume"; btnColor: "#f9e2af" }
                             ListElement { name: "Updater"; icon: "󰚰"; target: "updater"; btnColor: "#94e2d5" }
                             ListElement { name: "Wallpaper"; icon: "󰸉"; target: "wallpaper"; btnColor: "#f5c2e7" }
-                            ListElement { name: "Screenshots"; icon: "󰹑"; target: "screenshotgallery"; btnColor: "#a6e3a1" }
                         }
 
                         delegate: AppButton {

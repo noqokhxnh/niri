@@ -326,7 +326,10 @@ if [ "$FULL_MODE" = true ] || [ -n "$GEOMETRY" ]; then
         exit 0
     fi
 
-    SCALE_FACTOR=$(niri msg -j outputs 2>/dev/null | jq -r '.[0].scale // .[].scale' | head -n1 || echo 1)
+    SCALE_FACTOR=$(niri msg -j outputs 2>/dev/null | jq -r '.[0].scale // .[].scale' | head -n1)
+    if [[ ! "$SCALE_FACTOR" =~ ^[0-9.]+$ ]]; then
+        SCALE_FACTOR=1
+    fi
     GRIM_CMD="grim -s $SCALE_FACTOR -l 0"
     if [ -n "$GEOMETRY" ]; then
         # Ensure geometry is treated as a single argument if passed from QML

@@ -155,6 +155,7 @@ binds {
     
     // --- Screenshot Controls ---
     Print { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh"; }
+    Super+Shift+S { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh"; }
     Shift+Print { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh" "--edit"; }
     Super+Print { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh" "--full"; }
     Super+Shift+Print { spawn "/home/khxnh/.config/niri/scripts/screenshot.sh" "--full" "--edit"; }
