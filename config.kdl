@@ -113,22 +113,24 @@ binds {
     Super+E { spawn "nautilus"; }
     
     // --- Quickshell Panel Toggles ---
-    Super+R { spawn "bash" "/home/khxnh/.config/niri/scripts/reload.sh"; }
-    Super+C { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "clipboard"; }
-    Super+P { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "movies"; }
-    Super+Super_L { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "applauncher"; }
-    Super+Shift+S { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "settings"; }
-    Super+Q { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "music"; }
-    Super+B { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "battery"; }
-    Super+W { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "wallpaper"; }
-    Super+S { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "calendar"; }
+    Super+Shift+Alt+R { spawn "bash" "/home/khxnh/.config/niri/scripts/reload.sh"; }
+    Super+V { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "clipboard"; }
+    Super+Shift+P { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "movies"; }
+    Super+A { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "applauncher"; }
+    Super+Shift+I { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "settings"; }
+    Super+Shift+Q { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "music"; }
+    Super+Shift+B { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "battery"; }
+    Super+Shift+W { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "wallpaper"; }
+    Super+Shift+C { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "calendar"; }
+    Super+C { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "photobooth"; }
     Super+Shift+N { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "network"; }
     Super+N { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "notes"; }
     Super+Shift+T { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "focustime"; }
-    Super+V { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "volume"; }
-    Super+H { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "guide"; }
-    Super+D { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "services"; }
-    Super+M { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "monitors"; }
+    Super+Shift+V { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "volume"; }
+    Super+Shift+Alt+H { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "guide"; }
+    Super+D { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "dashboard"; }
+    Super+Shift+D { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "services"; }
+    Super+Shift+M { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "toggle" "monitors"; }
     
     // --- SwayOSD Controls ---
     Caps_Lock { spawn "sleep" "0.1" "&&" "swayosd-client" "--caps-lock"; }
