@@ -1,6 +1,6 @@
 # Premium Hyprland & Quickshell Configuration
 
-A state-of-the-art, high-performance, and visually stunning Wayland desktop environment built on **Hyprland** and **Quickshell** (QML/Qt6). 
+A state-of-the-art, high-performance, and visually stunning Wayland desktop environment built on **Niri** and **Quickshell** (QML/Qt6). 
 
 Featuring real-time Material You dynamic color theme generation, customized high-speed utility widgets, and custom C++ backend controllers.
 
