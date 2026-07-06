@@ -8,10 +8,11 @@ CACHE_IMG="$QS_CACHE_WALLPAPER_PICKER/current_wallpaper.png"
 
 RELOAD_SCRIPT_PATH="$(dirname "${BASH_SOURCE[0]}")/quickshell/wallpaper/matugen_reload.sh"
 
-# If the flag exists, just run matugen and the reload script, then exit
+# If the flag exists, just run matugen, awww, and the reload script, then exit
 if [ -f "$FLAG" ]; then
-    # Use the cached wallpaper image for matugen
+    # Use the cached wallpaper image for matugen and awww
     if [ -f "$CACHE_IMG" ]; then
+        awww img "$CACHE_IMG" --transition-type any --transition-pos 0.5,0.5 --transition-fps 144 --transition-duration 1 &
         matugen image "$CACHE_IMG" --source-color-index 0
     fi
     
