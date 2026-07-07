@@ -1,4 +1,4 @@
-# Premium Niri & Quickshell
+# Lucretia: Niri & Quickshell
 
 A state-of-the-art, high-performance, and visually stunning Wayland desktop environment built on **Niri** and **Quickshell** (QML/Qt6). 
 
