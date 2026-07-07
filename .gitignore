@@ -16,8 +16,8 @@ config/rules.conf
 config/settings.conf
 config/variables.conf
 # ──────────────────────────────────────────────────────────────────────────────
-# NOTE: colors.conf / hypridle.conf are intentionally tracked —
-# they are hand-maintained source files, not generated output.
+# NOTE: colors.conf is intentionally tracked —
+# it is a hand-maintained source file, not generated output.
 # ──────────────────────────────────────────────────────────────────────────────
 hyprland.conf
 *.bak

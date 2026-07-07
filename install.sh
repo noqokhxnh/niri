@@ -6,13 +6,13 @@ if ! tput colors &>/dev/null; then
 fi
 
 # ==============================================================================
-# Premium Hyprland & Quickshell Desktop Environment Installer
+# Premium Niri & Quickshell Desktop Environment Installer
 # ==============================================================================
 
 # set -e
 
 # Script Versioning & Initialization
-DOTS_VERSION="1.2.3"
+DOTS_VERSION="1.3.0"
 VERSION_FILE="$HOME/.local/state/imperative-dots-version"
 
 # Terminal UI Colors & Formatting
@@ -150,7 +150,7 @@ fi
 
 # Main official packages
 ARCH_PKGS=(
-    "hyprland" "hypridle" "kitty" "cava" "zbar" "pavucontrol" "alsa-utils" "awww" 
+    "niri" "swayidle" "kitty" "cava" "zbar" "pavucontrol" "alsa-utils" "awww" 
     "wl-clipboard" "fd" "qt6-multimedia" "qt6-5compat" "ripgrep" "fcitx5" "fcitx5-configtool"
     "cliphist" "jq" "socat" "inotify-tools" "pamixer" "brightnessctl" "acpi" "iw"
     "bluez" "bluez-utils" "libnotify" "networkmanager" "lm_sensors" "bc" 
@@ -158,7 +158,7 @@ ARCH_PKGS=(
     "imagemagick" "wget" "file" "git" "psmisc"
     "matugen-bin" "ffmpeg" "fastfetch" "quickshell-git" "unzip" "python-websockets" "qt6-websockets"
     "grim" "playerctl" "satty" "yq" "xdg-desktop-portal-gtk" "slurp" "mpvpaper"
-    "wmctrl" "power-profiles-daemon" "swayosd-git" "nautilus" "hyprpolkitagent"
+    "wmctrl" "power-profiles-daemon" "swayosd-git" "nautilus" "polkit-kde-agent"
     "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
     "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme" "xdg-desktop-portal-wlr"
 )
@@ -621,7 +621,7 @@ manage_keyboard() {
 show_overview() {
     draw_header
     echo -e "${BOLD}${C_MAGENTA}=== System Overview & Keybinds ===${RESET}\n"
-    echo -e "This configuration is a premium Hyprland & Quickshell environment.\n"
+    echo -e "This configuration is a premium Niri & Quickshell environment.\n"
 
     print_kb() {
         printf "  ${C_CYAN}[${RESET} ${BOLD}%-17s${RESET} ${C_CYAN}]${RESET}  ${C_YELLOW}➜${RESET}  %s\n" "$1" "$2"
@@ -1620,6 +1620,6 @@ fi
 if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ]; then
     echo -e "Old configurations backed up to: ${C_CYAN}$BACKUP_DIR${RESET}"
 fi
-echo -e "Please log out and log back in, or restart Hyprland to apply all changes."
+echo -e "Please log out and log back in, or restart Niri to apply all changes."
 
 send_telemetry "done"

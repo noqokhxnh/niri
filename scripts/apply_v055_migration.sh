@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ~/.config/niri/scripts/apply_v055_migration.sh
 # ─────────────────────────────────────────────────────────────────────────────
-# Run this ONCE after upgrading Hyprland to v0.55+.
-# It swaps the lua/ directory to the v0.55-compatible version and activates
-# native Lua config by creating hyprland.lua in the config root.
+# [DEPRECATED] This was for the Hyprland → v0.55 Lua migration.
+# Current setup uses Niri, so this script is no longer relevant.
+# Retained only for reference.
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e

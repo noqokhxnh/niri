@@ -137,8 +137,8 @@ if [ ! -s "$TMPFILE" ]; then
 fi
 
 # Validate có nội dung hợp lệ — kiểm tra signature hoặc marker của installer mới
-if ! grep -q "Premium Hyprland" "$TMPFILE"; then
-    die "Installer không hợp lệ: thiếu marker 'Premium Hyprland'. Upstream có thể đã thay đổi format."
+if ! grep -q "Premium Niri" "$TMPFILE"; then
+    die "Installer không hợp lệ: thiếu marker 'Premium Niri'. Upstream có thể đã thay đổi format."
 fi
 
 success "Installer hợp lệ. Bắt đầu chạy..."

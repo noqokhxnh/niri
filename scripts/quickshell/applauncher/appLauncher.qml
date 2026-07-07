@@ -479,7 +479,7 @@ Item {
         history[appName] = (history[appName] || 0) + 1;
         saveHistory(history);
 
-        // Hyprland 0.55 removed the legacy "exec" dispatcher; run via shell like keybind exec_cmd.
+        // Run via shell instead of direct exec to avoid compositor dispatch quirks.
         Quickshell.execDetached(["bash", "-c", "unset HL_INITIAL_WORKSPACE_TOKEN && " + execStr]);
         Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/niri/scripts/qs_manager.sh", "close"]);
     }

@@ -174,7 +174,7 @@ Item {
 
         config.updateJsonBulk(configObj);
         sh("notify-send 'Quickshell' 'Settings Applied Successfully!'");
-        sh("bash " + config.hyprDir + "/scripts/update_hypridle.sh " + config.idleLockTimeout + " " + config.idleScreenOffTimeout + " " + config.idleSleepTimeout);
+        // Idle timeouts are now set statically in scripts/swayidle.sh
 
         if (config.workspaceCount !== config.initialWorkspaceCount) {
             sh(`qs -p "${qsScriptsDir}/TopBar.qml" ipc call topbar queueReload`);

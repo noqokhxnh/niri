@@ -4,11 +4,9 @@
 # Chạy ĐỒNG BỘ (blocking) để đảm bảo PAM/logind nhận đúng session identity
 # trước khi user kịp mở terminal và gõ sudo.
 #
-# Gọi từ autostart.lua:
-#   hl.exec_cmd("~/.config/niri/scripts/sync-session-env.sh")
-#   -- Đặt trước tất cả hl.exec_cmd() khác
+# Gọi từ spawn-at-startup trong config.kdl (trước tất cả các spawn khác)
 
-# Đợi WAYLAND_DISPLAY sẵn sàng (tránh race condition với Hyprland compositor)
+# Đợi WAYLAND_DISPLAY sẵn sàng (tránh race condition với compositor)
 for i in $(seq 1 20); do
     [ -n "$WAYLAND_DISPLAY" ] && break
     sleep 0.1
@@ -37,12 +35,12 @@ if [ "$XDG_CURRENT_DESKTOP" = "niri" ]; then
     systemctl --user stop xdg-desktop-portal-gnome xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null
     systemctl --user start xdg-desktop-portal-gnome xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null
 else
-    systemctl --user stop xdg-desktop-portal-hyprland xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null
-    systemctl --user start xdg-desktop-portal-hyprland xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null
+    systemctl --user stop xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null
+    systemctl --user start xdg-desktop-portal-gtk xdg-desktop-portal 2>/dev/null
 fi
 
 # Khởi động swayosd-server sau khi môi trường hiển thị và D-Bus đã sẵn sàng
 swayosd-server --top-margin 0.9 --style "$HOME/.config/swayosd/style.css" >/dev/null 2>&1 &
 
 # Log để debug nếu cần
-echo "[sync-session-env] Done at $(date)" >> /tmp/hypr-session-sync.log
+echo "[sync-session-env] Done at $(date)" >> /tmp/niri-session-sync.log

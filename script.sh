@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Arch Linux Setup Script
-# Cài đặt môi trường phát triển cơ bản và cấu hình Hyprland/Quickshell
+# Cài đặt môi trường phát triển cơ bản và cấu hình Niri/Quickshell
 
 # Colors for output
 RED='\033[0;31m'
@@ -89,7 +89,7 @@ while true; do
     MENU_ITEMS+="10. $S_MODERN_CLI CLI hiện đại & Giải nén (lazygit, bat, eza, zoxide, ripgrep, ...)\n"
     MENU_ITEMS+="11. $S_ZEN Zen Browser (Trình duyệt web tối ưu bảo mật)\n"
     MENU_ITEMS+="12. $S_LOCALSEND LocalSend (Chia sẻ file nội bộ)\n"
-    MENU_ITEMS+="13. $S_HYPR_CONFIG Premium Hyprland & Quickshell Desktop Environment\n"
+    MENU_ITEMS+="13. $S_HYPR_CONFIG Premium Niri & Quickshell Desktop Environment\n"
     MENU_ITEMS+="14. $S_NVM NVM & Node.js LTS (Trình quản lý phiên bản Node.js)\n"
     MENU_ITEMS+="15. $S_ALIASES Thiết lập bash aliases cho CLI hiện đại (~/.bashrc)\n"
     MENU_ITEMS+="16. ${BOLD}${GREEN}[ BẮT ĐẦU CÀI ĐẶT CÁC MỤC ĐÃ CHỌN ]${NC}\n"
@@ -234,9 +234,9 @@ if [ "$OPT_LOCALSEND" = true ]; then
     fi
 fi
 
-# 11. Install Premium Hyprland & Quickshell Desktop Environment
+# 11. Install Premium Niri & Quickshell Desktop Environment
 if [ "$OPT_HYPR_CONFIG" = true ]; then
-    print_status "Cài đặt cấu hình Premium Hyprland & Quickshell Desktop..."
+    print_status "Cài đặt cấu hình Premium Niri & Quickshell Desktop..."
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [ -f "$SCRIPT_DIR/install.sh" ]; then
         print_status "Tìm thấy install.sh cục bộ, tiến hành cài đặt..."
@@ -328,7 +328,7 @@ print_status "Các công cụ đã cài đặt thành công:"
 [ "$OPT_PYTHON" = true ] && echo "  • Python, pip, virtualenv"
 [ "$OPT_ZEN" = true ] && echo "  • Zen Browser"
 [ "$OPT_LOCALSEND" = true ] && echo "  • LocalSend (chia sẻ file)"
-[ "$OPT_HYPR_CONFIG" = true ] && echo "  • Premium Hyprland & Quickshell Desktop Environment"
+[ "$OPT_HYPR_CONFIG" = true ] && echo "  • Premium Niri & Quickshell Desktop Environment"
 [ "$OPT_MODERN_CLI" = true ] && echo "  • Gói giải nén (unzip, unrar, p7zip)"
 echo ""
 echo ""

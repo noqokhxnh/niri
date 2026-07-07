@@ -493,7 +493,7 @@
       "command": "awww-daemon"
     },
     {
-      "command": "hypridle -c ~/.config/niri/hypridle.conf"
+      "command": "~/.config/niri/scripts/swayidle.sh"
     },
     {
       "command": "quickshell -p ~/.config/niri/scripts/quickshell/Shell.qml"
