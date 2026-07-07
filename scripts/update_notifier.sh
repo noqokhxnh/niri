@@ -12,7 +12,7 @@ PENDING_FILE="$QS_CACHE_UPDATER/update_pending"
 
 while true; do
     # Fetch local version
-    LOCAL_VERSION=$(source ~/.local/state/imperative-dots-version 2>/dev/null && echo "$LOCAL_VERSION")
+    LOCAL_VERSION=$(source ~/.local/state/lucretia-version 2>/dev/null && echo "$LOCAL_VERSION")
     LOCAL_VERSION=${LOCAL_VERSION:-"Unknown"}
     
     # Fetch remote version
@@ -36,7 +36,7 @@ while true; do
                 echo "$REMOTE_VERSION" > "$CACHE_FILE"
 
                 # Send standard notification without the action prompt
-                notify-send -t 15000 -a 'Imperative Dots' -u normal 'Update Available' "A new version ($REMOTE_VERSION) is ready! Click the update icon in the topbar to install."
+                notify-send -t 15000 -a 'Lucretia' -u normal 'Update Available' "A new version ($REMOTE_VERSION) is ready! Click the update icon in the topbar to install."
                 
             fi
         fi

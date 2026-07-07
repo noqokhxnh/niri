@@ -12,8 +12,8 @@ fi
 # set -e
 
 # Script Versioning & Initialization
-DOTS_VERSION="1.3.0"
-VERSION_FILE="$HOME/.local/state/imperative-dots-version"
+DOTS_VERSION="1.3.1"
+VERSION_FILE="$HOME/.local/state/lucretia-version"
 
 # Terminal UI Colors & Formatting
 RESET="\e[0m"

@@ -156,7 +156,7 @@ Item {
 
     Process {
         id: versionReader
-        command: ["bash", "-c", "source ~/.local/state/imperative-dots-version 2>/dev/null && echo $LOCAL_VERSION || echo 'Unknown'"]
+        command: ["bash", "-c", "source ~/.local/state/lucretia-version 2>/dev/null && echo $LOCAL_VERSION || echo 'Unknown'"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -433,7 +433,7 @@ Item {
                             Layout.alignment: Qt.AlignVCenter
                             spacing: root.s(2)
                             Text { 
-                                text: "Imperative"
+                                text: "Lucretia"
                                 font.family: "JetBrains Mono"
                                 font.weight: Font.Black
                                 font.pixelSize: root.s(15)

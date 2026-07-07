@@ -110,7 +110,7 @@ Item {
     Process {
         id: localVerProcess
         running: false
-        command: ["bash", "-c", "source ~/.local/state/imperative-dots-version 2>/dev/null && [ -n \"$LOCAL_VERSION\" ] && echo $LOCAL_VERSION || echo '0.0.0'"]
+        command: ["bash", "-c", "source ~/.local/state/lucretia-version 2>/dev/null && [ -n \"$LOCAL_VERSION\" ] && echo $LOCAL_VERSION || echo '0.0.0'"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let out = this.text ? this.text.trim() : "";
@@ -136,7 +136,7 @@ Item {
     property string videoResolveScript: `
 import urllib.request, json, subprocess, sys
 try:
-    local_str = subprocess.check_output("source ~/.local/state/imperative-dots-version 2>/dev/null && echo $LOCAL_VERSION", shell=True).decode('utf-8').strip()
+    local_str = subprocess.check_output("source ~/.local/state/lucretia-version 2>/dev/null && echo $LOCAL_VERSION", shell=True).decode('utf-8').strip()
     if not local_str: local_str = '0.0.0'
     
     # Safe Semantic Version Parsing
@@ -208,7 +208,7 @@ import urllib.request, json, subprocess
 repo = 'noqokhxnh/niri'
 
 try:
-    local = subprocess.check_output("source ~/.local/state/imperative-dots-version 2>/dev/null && echo $LOCAL_VERSION", shell=True).decode('utf-8').strip()
+    local = subprocess.check_output("source ~/.local/state/lucretia-version 2>/dev/null && echo $LOCAL_VERSION", shell=True).decode('utf-8').strip()
 except:
     local = ''
 
