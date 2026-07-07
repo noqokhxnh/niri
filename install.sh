@@ -156,11 +156,11 @@ ARCH_PKGS=(
     "bluez" "bluez-utils" "libnotify" "networkmanager" "lm_sensors" "bc" 
     "pipewire" "wireplumber" "pipewire-pulse" "pipewire-alsa" "pipewire-jack" "libpulse" "python"
     "imagemagick" "wget" "file" "git" "psmisc"
-    "matugen-bin" "ffmpeg" "fastfetch" "quickshell-git" "unzip" "python-websockets" "qt6-websockets"
+    "matugen-bin" "ffmpeg" "fastfetch" "quickshell-git" "unzip"
     "grim" "playerctl" "satty" "yq" "xdg-desktop-portal-gtk" "slurp" "mpvpaper"
-    "wmctrl" "power-profiles-daemon" "swayosd-git" "nautilus" "polkit-kde-agent"
+    "power-profiles-daemon" "swayosd-git" "nautilus" "polkit-kde-agent"
     "qt5-wayland" "qt5-quickcontrols" "qt5-quickcontrols2" "qt5-graphicaleffects" "qt6-wayland"
-    "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme" "xdg-desktop-portal-wlr"
+    "qt5ct" "qt6ct" "gpu-screen-recorder" "adw-gtk-theme"
 )
 
 PKGS=("${ARCH_PKGS[@]}")
