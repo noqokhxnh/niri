@@ -243,7 +243,7 @@ if [ "$OPT_HYPR_CONFIG" = true ]; then
         bash "$SCRIPT_DIR/install.sh"
     else
         print_status "Không tìm thấy install.sh cục bộ, tải và chạy từ GitHub..."
-        curl -sL https://raw.githubusercontent.com/noqokhxnh/niri/main/install.sh | bash
+        curl -sL https://raw.githubusercontent.com/noqokhxnh/lucretia/main/install.sh | bash
     fi
 fi
 

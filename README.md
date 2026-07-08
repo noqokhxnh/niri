@@ -13,7 +13,7 @@ Featuring real-time Material You dynamic color theme generation, customized high
 You can automatically deploy this entire desktop configuration, resolve dependencies, and compile all C++ background daemons on **Arch Linux** with a single command:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/noqokhxnh/niri/main/install.sh | bash
+curl -sL https://raw.githubusercontent.com/noqokhxnh/lucretia/main/install.sh | bash
 ```
 
 > [!NOTE]

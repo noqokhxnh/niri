@@ -3,6 +3,10 @@
 // Include the dynamically generated colors from Matugen
 include optional=true "colors.kdl"
 
+// Yêu cầu các app bỏ client-side decorations (thanh tiêu đề xấu)
+// Niri sẽ vẽ focus ring thay thế
+prefer-no-csd
+
 input {
     keyboard {
         xkb {
@@ -72,6 +76,12 @@ window-rule {
 window-rule {
     geometry-corner-radius 12
     clip-to-geometry true
+}
+
+window-rule {
+    match title=r#"Counter-Strike 2"#
+    match app-id=r#"^cs2$"#
+    open-fullscreen true
 }
 
 binds {
@@ -179,6 +189,8 @@ binds {
     Super+Shift+8 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "8" "move"; }
     Super+Shift+9 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "9" "move"; }
     Super+Shift+0 { spawn "bash" "/home/khxnh/.config/niri/scripts/qs_manager.sh" "10" "move"; }
+    
+    Super+grave { fullscreen-window; }
     
     Super+Tab { toggle-overview; }
 }
