@@ -480,7 +480,7 @@ except Exception as e:
                             transformOrigin: Item.Center
                             
                             RotationAnimation on rotation {
-                                from: 0; to: 360; duration: 2500; loops: Animation.Infinite; running: parent.visible
+                                from: 0; to: 360; duration: 2500; loops: Animation.Infinite; running: parent ? parent.visible : false
                             }
                         }
                     }

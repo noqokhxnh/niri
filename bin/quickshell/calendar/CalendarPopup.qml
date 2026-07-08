@@ -49,7 +49,6 @@ Item {
             
             // Re-center horizontally to keep the popup perfectly in the middle when scaling changes
             let newX = Math.floor((Screen.width / 2) - (window.targetMasterWidth / 2));
-            masterWindow.targetX = newX;
             masterWindow.animX = newX;
         }
     }
@@ -571,7 +570,7 @@ Item {
                 }
                 
                 transform: [
-                    Translate { y: parent.drift },
+                    Translate { y: drift },
                     Translate { x: window.weatherContentOffset * 2 } // Exaggerated shift for background depth
                 ]
             }
@@ -981,7 +980,7 @@ Item {
                         Text {
                             Layout.fillWidth: true 
                             horizontalAlignment: Text.AlignHCenter 
-                            text: window.weatherData && window.weatherData.forecast[window.weatherView] ? window.weatherData.forecast[window.weatherView].day_full.toUpperCase() : "LOADING..."
+                            text: window.weatherData && window.weatherData.forecast && window.weatherData.forecast[window.weatherView] ? window.weatherData.forecast[window.weatherView].day_full.toUpperCase() : "LOADING..."
                             font.family: "JetBrains Mono"
                             font.weight: Font.Black
                             font.pixelSize: Math.round(16 * window.sf)

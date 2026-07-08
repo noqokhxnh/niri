@@ -464,11 +464,13 @@ PanelWindow {
         masterWindow.targetH = t.h;
 
         let props = {};
-        props["notifModel"]   = masterWindow.notifModel;
-        props["liveNotifs"]   = masterWindow.liveNotifs;
-        props["notifIdMap"]   = masterWindow._notifIdMap;
         props["layoutWidth"]  = t.w;
         props["layoutHeight"] = t.h;
+        if (newWidget === "battery" || newWidget === "photobooth") {
+            props["notifModel"]   = masterWindow.notifModel;
+            props["liveNotifs"]   = masterWindow.liveNotifs;
+            props["notifIdMap"]   = masterWindow._notifIdMap;
+        }
         if (newWidget === "wallpaper") props["widgetArg"] = arg;
 
         if (immediate) {
@@ -502,5 +504,12 @@ PanelWindow {
             widgetStack.clear();
             masterWindow.disableMorph = false;
         }
+    }
+
+    // Set application identifiers so QSettings works without warnings
+    Component.onCompleted: {
+        Qt.application.name = "lucretia";
+        Qt.application.organization = "lucretia";
+        Qt.application.domain = "lucretia.local";
     }
 }
