@@ -1118,7 +1118,7 @@ private:
     }
 
     bool is_locked() {
-        return system("pgrep -f Lock.qml > /dev/null") == 0;
+        return system("pgrep -f '[L]ock.qml' > /dev/null") == 0;
     }
 
     void runNiriListener() {
@@ -1190,7 +1190,7 @@ private:
             entry = {date_buf, current_class, current_title, now_tm->tm_hour, now_tm->tm_min};
         }
         
-        if (!entry.cls.empty()) buffer.push_back(entry);
+        if (!entry.cls.empty() && entry.cls != "Locked") buffer.push_back(entry);
 
 
 

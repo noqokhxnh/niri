@@ -21,3 +21,6 @@ config/variables.conf
 # ──────────────────────────────────────────────────────────────────────────────
 hyprland.conf
 *.bak
+**/.codewhale/*
+!**/.codewhale/constitution.json
+.deepseek/

@@ -98,7 +98,7 @@ void update_active_window() {
 }
 
 bool is_locked() {
-    return system("pgrep -f Lock.qml > /dev/null") == 0;
+    return system("pgrep -f '[L]ock.qml' > /dev/null") == 0;
 }
 
 void ipc_listener() {
@@ -199,7 +199,7 @@ int main() {
             entry = {date_buf, state.current_class, state.current_title, now_tm->tm_hour, now_tm->tm_min};
         }
         
-        if (!entry.cls.empty()) buffer.push_back(entry);
+        if (!entry.cls.empty() && entry.cls != "Locked") buffer.push_back(entry);
 
         // Dump state to JSON for UI every 5 seconds
         if (tick_counter % 5 == 0) {
