@@ -107,6 +107,92 @@ Item {
     readonly property color red: _theme.red
 
     readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/niri/bin/quickshell/calendar"
+    readonly property string notesJsonPath: paths.stateDir + "/calendar/notes.json"
+    property var calendarNotes: ({})
+
+    Process {
+        id: notesReader
+        command: ["bash", "-c", "mkdir -p '" + paths.stateDir + "/calendar' && cat '" + window.notesJsonPath + "' 2>/dev/null || echo '{}'"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    let txt = this.text.trim();
+                    if (txt !== "") {
+                        window.calendarNotes = JSON.parse(txt);
+                    } else {
+                        window.calendarNotes = {};
+                    }
+                } catch(e) {
+                    window.calendarNotes = {};
+                }
+            }
+        }
+    }
+
+    function saveNote(dateStr, noteText) {
+        let notes = Object.assign({}, window.calendarNotes);
+        if (noteText.trim() === "") {
+            delete notes[dateStr];
+        } else {
+            notes[dateStr] = noteText;
+        }
+        window.calendarNotes = notes;
+
+        let jsonStr = JSON.stringify(notes).replace(/'/g, "'\\''");
+        let cmd = "mkdir -p '" + paths.stateDir + "/calendar' && echo '" + jsonStr + "' > '" + window.notesJsonPath + "'";
+        Quickshell.execDetached(["bash", "-c", cmd]);
+    }
+
+    function getCellDateStr(index, dayNum, isCurrentMonth) {
+        let d = new Date(window.currentTime.getTime());
+        d.setDate(1); 
+        d.setMonth(d.getMonth() + window.monthOffset);
+        let targetMonth = d.getMonth();
+        let targetYear = d.getFullYear();
+        
+        let cellYear = targetYear;
+        let cellMonth = targetMonth;
+        
+        if (!isCurrentMonth) {
+            if (index < 10) {
+                cellMonth = targetMonth - 1;
+                if (cellMonth < 0) {
+                    cellMonth = 11;
+                    cellYear = targetYear - 1;
+                }
+            } else {
+                cellMonth = targetMonth + 1;
+                if (cellMonth > 11) {
+                    cellMonth = 0;
+                    cellYear = targetYear + 1;
+                }
+            }
+        }
+        
+        let day = parseInt(dayNum);
+        let y = cellYear.toString();
+        let m = (cellMonth + 1).toString().padStart(2, '0');
+        let dayStr = day.toString().padStart(2, '0');
+        return y + "-" + m + "-" + dayStr;
+    }
+
+    // Note Preview Tooltip Properties
+    property string tooltipText: ""
+    property real tooltipX: 0
+    property real tooltipY: 0
+    property bool tooltipVisible: false
+
+    // Note Editor Dialog Overlay Properties
+    property string activeNoteDate: ""
+    property string activeNoteText: ""
+    property bool noteEditorOpen: false
+
+    function openNoteEditor(dateStr) {
+        window.activeNoteDate = dateStr;
+        window.activeNoteText = window.calendarNotes[dateStr] || "";
+        window.noteEditorOpen = true;
+    }
 
     // -------------------------------------------------------------------------
     // TIME OF DAY DYNAMIC COLORS
@@ -865,16 +951,7 @@ Item {
                             MouseArea { id: nextMa; anchors.fill: parent; hoverEnabled: true; onClicked: window.setMonthOffset(window.targetMonthOffset + 1) }
                         }
 
-                        Rectangle {
-                            Layout.preferredWidth: Math.round(32 * window.sf); Layout.preferredHeight: Math.round(32 * window.sf); radius: Math.round(16 * window.sf)
-                            color: diaryMa.containsMouse ? window.surface1 : "transparent"
-                            Text { anchors.centerIn: parent; text: "+"; font.family: "Iosevka Nerd Font"; color: diaryMa.containsMouse ? window.mauve : window.text; font.pixelSize: Math.round(32 * window.sf) }
-                            MouseArea { 
-                                id: diaryMa; anchors.fill: parent; hoverEnabled: true; 
-                                onClicked: Quickshell.execDetached(["bash", window.scriptsDir + "/diary_manager.sh"]) 
-                            }
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                        }
+                        // Plus button removed in favor of day right-click
                     }
 
                     RowLayout {
@@ -909,15 +986,19 @@ Item {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 
-                                color: isToday ? window.textAccent : (dayMa.containsMouse ? Qt.alpha(window.surface2, 0.4) : "transparent")
+                                property string cellDate: window.getCellDateStr(index, dayNum, isCurrentMonth)
+                                property bool hasNote: window.calendarNotes.hasOwnProperty(cellDate)
+                                property string noteText: hasNote ? window.calendarNotes[cellDate] : ""
+                                
+                                color: isToday ? window.textAccent : (hasNote ? Qt.rgba(window.mauve.r, window.mauve.g, window.mauve.b, 0.15) : (dayMa.containsMouse ? Qt.alpha(window.surface2, 0.4) : "transparent"))
                                 radius: Math.round(10 * window.sf)
-                                scale: dayMa.containsMouse ? 1.2 : 1.0
-                                border.color: isToday ? window.surface0 : (dayMa.containsMouse ? window.overlay0 : "transparent")
-                                border.width: isToday || dayMa.containsMouse ? 1 : 0
+                                scale: dayMa.containsMouse ? 1.15 : 1.0
+                                border.color: isToday ? window.surface0 : (hasNote ? window.mauve : (dayMa.containsMouse ? window.overlay0 : "transparent"))
+                                border.width: isToday || hasNote || dayMa.containsMouse ? 1 : 0
                                 
                                 Behavior on color { ColorAnimation { duration: 150 } }
                                 Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
-
+ 
                                 Text {
                                     anchors.centerIn: parent
                                     text: dayNum
@@ -927,8 +1008,41 @@ Item {
                                     color: isToday ? window.base : (isCurrentMonth ? window.text : window.surface0)
                                     Behavior on color { ColorAnimation { duration: 200 } }
                                 }
-
-                                MouseArea { id: dayMa; anchors.fill: parent; hoverEnabled: true }
+ 
+                                Rectangle {
+                                    anchors.bottom: parent.bottom
+                                    anchors.bottomMargin: Math.round(4 * window.sf)
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    width: Math.round(4 * window.sf)
+                                    height: Math.round(4 * window.sf)
+                                    radius: Math.round(2 * window.sf)
+                                    color: isToday ? window.base : window.mauve
+                                    visible: hasNote
+                                }
+ 
+                                MouseArea {
+                                    id: dayMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                    onClicked: (mouse) => {
+                                        if (mouse.button === Qt.RightButton) {
+                                            window.openNoteEditor(cellDate);
+                                        }
+                                    }
+                                    onEntered: {
+                                        if (hasNote) {
+                                            let pt = mapToItem(window, 0, 0);
+                                            window.tooltipX = pt.x + (width - tooltipItem.width) / 2;
+                                            window.tooltipY = pt.y - tooltipItem.height - Math.round(8 * window.sf);
+                                            window.tooltipText = noteText;
+                                            window.tooltipVisible = true;
+                                        }
+                                    }
+                                    onExited: {
+                                        window.tooltipVisible = false;
+                                    }
+                                }
                             }
                         }
                     }
@@ -1530,5 +1644,190 @@ Item {
                 }
             }
         }
+    }
+
+    // =======================================================
+    // FLOATING PREVIEW TOOLTIP
+    // =======================================================
+    Rectangle {
+        id: tooltipItem
+        x: window.tooltipX
+        y: window.tooltipY
+        width: Math.min(Math.round(220 * window.sf), tooltipTextLabel.implicitWidth + Math.round(16 * window.sf))
+        height: tooltipTextLabel.implicitHeight + Math.round(12 * window.sf)
+        radius: Math.round(8 * window.sf)
+        color: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.95)
+        border.color: window.surface2
+        border.width: 1
+        visible: window.tooltipVisible && window.tooltipText !== ""
+        z: 9999
+
+        Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+        Behavior on y { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: 150 } }
+        opacity: visible ? 1.0 : 0.0
+
+        Text {
+            id: tooltipTextLabel
+            anchors.fill: parent
+            anchors.margins: Math.round(8 * window.sf)
+            text: window.tooltipText
+            color: window.text
+            font.family: "JetBrains Mono"
+            font.pixelSize: Math.round(11 * window.sf)
+            wrapMode: Text.Wrap
+            elide: Text.ElideRight
+            maximumLineCount: 4
+        }
+    }
+
+    // =======================================================
+    // NOTE EDITOR MODAL DIALOG
+    // =======================================================
+    Rectangle {
+        id: noteEditorOverlay
+        anchors.fill: parent
+        color: Qt.rgba(window.base.r, window.base.g, window.base.b, 0.6)
+        visible: window.noteEditorOpen
+        z: 10000
+        opacity: visible ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+
+        // Dim background mouse eater
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                window.noteEditorOpen = false;
+            }
+        }
+
+        Rectangle {
+            id: noteEditorCard
+            anchors.centerIn: parent
+            width: Math.round(380 * window.sf)
+            height: Math.round(280 * window.sf)
+            radius: Math.round(16 * window.sf)
+            color: window.surface0
+            border.color: window.surface2
+            border.width: 1
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Math.round(18 * window.sf)
+                spacing: Math.round(12 * window.sf)
+
+                Text {
+                    text: "Ghi chú ngày: " + window.activeNoteDate
+                    font.family: "Outfit"
+                    font.pixelSize: Math.round(16 * window.sf)
+                    font.weight: Font.Bold
+                    color: window.mauve
+                    Layout.fillWidth: true
+                }
+
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+
+                    TextArea {
+                        id: noteTextArea
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: Math.round(13 * window.sf)
+                        color: window.text
+                        wrapMode: TextEdit.Wrap
+                        placeholderText: "Nhập ghi chú tại đây..."
+                        placeholderTextColor: window.overlay0
+                        
+                        background: Rectangle {
+                            color: window.base
+                            radius: Math.round(8 * window.sf)
+                            border.color: noteTextArea.activeFocus ? window.mauve : window.surface1
+                            border.width: 1
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Math.round(12 * window.sf)
+
+                    Item { Layout.fillWidth: true } // spacer
+
+                    Rectangle {
+                        width: Math.round(80 * window.sf)
+                        height: Math.round(32 * window.sf)
+                        radius: Math.round(8 * window.sf)
+                        color: cancelMa.containsMouse ? window.surface2 : window.surface1
+                        border.color: window.surface2
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Hủy"
+                            font.family: "Outfit"
+                            font.pixelSize: Math.round(13 * window.sf)
+                            font.weight: Font.Medium
+                            color: window.text
+                        }
+
+                        MouseArea {
+                            id: cancelMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                window.noteEditorOpen = false;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: Math.round(80 * window.sf)
+                        height: Math.round(32 * window.sf)
+                        radius: Math.round(8 * window.sf)
+                        color: saveMa.containsMouse ? Qt.lighter(window.mauve, 1.1) : window.mauve
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Lưu"
+                            font.family: "Outfit"
+                            font.pixelSize: Math.round(13 * window.sf)
+                            font.weight: Font.Bold
+                            color: window.base
+                        }
+
+                        MouseArea {
+                            id: saveMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                window.saveNote(window.activeNoteDate, noteTextArea.text);
+                                window.noteEditorOpen = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Dialog scale popup animation
+    onNoteEditorOpenChanged: {
+        if (noteEditorOpen) {
+            dialogScaleAnim.restart();
+        }
+    }
+
+    NumberAnimation {
+        id: dialogScaleAnim
+        target: noteEditorCard
+        property: "scale"
+        from: 0.92
+        to: 1.0
+        duration: 250
+        easing.type: Easing.OutBack
+        easing.overshoot: 1.15
     }
 }
