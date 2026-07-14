@@ -334,19 +334,19 @@ PanelWindow {
 
         Behavior on x {
             enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutBack; easing.overshoot: 1.1 }
         }
         Behavior on y {
             enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutBack; easing.overshoot: 1.1 }
         }
         Behavior on width {
             enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutBack; easing.overshoot: 1.1 }
         }
         Behavior on height {
             enabled: !masterWindow.disableMorph
-            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: masterWindow.morphDuration; easing.type: Easing.OutBack; easing.overshoot: 1.1 }
         }
 
         opacity: masterWindow.isVisible ? 1.0 : 0.0
@@ -386,9 +386,10 @@ PanelWindow {
                         }
                         NumberAnimation {
                             property: "scale"
-                            from: 0.98; to: 1.0
+                            from: 0.96; to: 1.0
                             duration: masterWindow.morphDurationSwitch
-                            easing.type: Easing.OutCubic
+                            easing.type: Easing.OutBack
+                            easing.overshoot: 1.15
                         }
                     }
                 }

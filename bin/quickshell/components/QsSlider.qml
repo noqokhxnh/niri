@@ -47,7 +47,7 @@ Item {
             // Disable animation during drag to ensure immediate 1:1 follow
             Behavior on width { 
                 enabled: !root.isDragging 
-                NumberAnimation { duration: 300; easing.type: Easing.OutQuint } 
+                SpringAnimation { spring: 3; damping: 0.7; mass: 0.6 }
             }
 
             // Smooth Horizontal Gradient

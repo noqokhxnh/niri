@@ -820,8 +820,8 @@ Variants {
                         property real actualLeft: targetLeft
                         property real actualRight: targetRight
 
-                        Behavior on actualLeft { NumberAnimation { id: leftAnim; duration: 250; easing.type: Easing.OutExpo } }
-                        Behavior on actualRight { NumberAnimation { id: rightAnim; duration: 250; easing.type: Easing.OutExpo } }
+                        Behavior on actualLeft { SpringAnimation { spring: 3.5; damping: 0.75; mass: 0.8 } }
+                        Behavior on actualRight { SpringAnimation { spring: 3.5; damping: 0.75; mass: 0.8 } }
 
                         x: actualLeft
                         width: actualRight - actualLeft

@@ -18,6 +18,23 @@ Item {
 
     MatugenColors { id: mocha }
 
+    property real introHeader: 0
+    property real introTopSection: 0
+    property real introBottomSection: 0
+
+    ParallelAnimation {
+        running: true
+        NumberAnimation { target: dashboardRoot; property: "introHeader"; from: 0; to: 1.0; duration: 500; easing.type: Easing.OutExpo }
+        SequentialAnimation {
+            PauseAnimation { duration: 100 }
+            NumberAnimation { target: dashboardRoot; property: "introTopSection"; from: 0; to: 1.0; duration: 600; easing.type: Easing.OutCubic }
+        }
+        SequentialAnimation {
+            PauseAnimation { duration: 200 }
+            NumberAnimation { target: dashboardRoot; property: "introBottomSection"; from: 0; to: 1.0; duration: 600; easing.type: Easing.OutCubic }
+        }
+    }
+
     Component.onCompleted: {
         SysData.subscribe();
         updateCalendarGrid();
@@ -89,6 +106,8 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             height: s(60)
+            opacity: dashboardRoot.introHeader
+            transform: Translate { y: (1 - dashboardRoot.introHeader) * s(15) }
 
             Column {
                 anchors.verticalCenter: parent.verticalCenter
@@ -113,6 +132,8 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             height: (parent.height - s(60) - s(40)) * 0.45 // 45% of remaining height
+            opacity: dashboardRoot.introTopSection
+            transform: Translate { y: (1 - dashboardRoot.introTopSection) * s(15) }
 
             // LEFT: SYSTEM MONITOR
             Rectangle {
@@ -206,6 +227,8 @@ Item {
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
+            opacity: dashboardRoot.introBottomSection
+            transform: Translate { y: (1 - dashboardRoot.introBottomSection) * s(15) }
 
             // LARGE CLOCK
             Rectangle {

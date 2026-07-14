@@ -18,6 +18,33 @@ Item {
 
     MatugenColors { id: mocha }
 
+    property real introHeader: 0
+    property real introSec1: 0
+    property real introSec2: 0
+    property real introSec3: 0
+    property real introSec4: 0
+
+    ParallelAnimation {
+        running: true
+        NumberAnimation { target: controlCenterRoot; property: "introHeader"; from: 0; to: 1.0; duration: 500; easing.type: Easing.OutExpo }
+        SequentialAnimation {
+            PauseAnimation { duration: 80 }
+            NumberAnimation { target: controlCenterRoot; property: "introSec1"; from: 0; to: 1.0; duration: 600; easing.type: Easing.OutCubic }
+        }
+        SequentialAnimation {
+            PauseAnimation { duration: 160 }
+            NumberAnimation { target: controlCenterRoot; property: "introSec2"; from: 0; to: 1.0; duration: 600; easing.type: Easing.OutCubic }
+        }
+        SequentialAnimation {
+            PauseAnimation { duration: 240 }
+            NumberAnimation { target: controlCenterRoot; property: "introSec3"; from: 0; to: 1.0; duration: 600; easing.type: Easing.OutCubic }
+        }
+        SequentialAnimation {
+            PauseAnimation { duration: 320 }
+            NumberAnimation { target: controlCenterRoot; property: "introSec4"; from: 0; to: 1.0; duration: 600; easing.type: Easing.OutCubic }
+        }
+    }
+
     // Background
     Rectangle {
         anchors.fill: parent
@@ -43,6 +70,8 @@ Item {
         // Header
         RowLayout {
             Layout.fillWidth: true
+            opacity: controlCenterRoot.introHeader
+            transform: Translate { y: (1 - controlCenterRoot.introHeader) * s(15) }
             Text {
                 text: "Control Center"
                 font.family: "Outfit"
@@ -71,6 +100,12 @@ Item {
                 id: scrollContent
                 width: parent.width
                 spacing: s(15)
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: s(15)
+                    opacity: controlCenterRoot.introSec1
+                    transform: Translate { y: (1 - controlCenterRoot.introSec1) * s(15) }
 
         // Section: Appearance (Theme & Color)
         Text { 
@@ -160,6 +195,13 @@ Item {
                 Layout.minimumWidth: s(45)
             }
         }
+        } // End Group 1
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: s(15)
+                    opacity: controlCenterRoot.introSec2
+                    transform: Translate { y: (1 - controlCenterRoot.introSec2) * s(15) }
 
         // Section: Modules
         Text { 
@@ -324,6 +366,13 @@ Item {
                 }
             }
         }
+        } // End Group 2
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: s(15)
+                    opacity: controlCenterRoot.introSec3
+                    transform: Translate { y: (1 - controlCenterRoot.introSec3) * s(15) }
 
         // Section: Power Profile
         Text { 
@@ -622,6 +671,13 @@ Item {
                 }
             }
         }
+        } // End Group 3
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: s(15)
+                    opacity: controlCenterRoot.introSec4
+                    transform: Translate { y: (1 - controlCenterRoot.introSec4) * s(15) }
 
         // Section: Screen & Sleep Timeout
         Text { 
@@ -968,6 +1024,7 @@ Item {
                 }
             }
         }
+        } // End Group 4
 
         Item { Layout.fillHeight: true } // Spacer
             }
