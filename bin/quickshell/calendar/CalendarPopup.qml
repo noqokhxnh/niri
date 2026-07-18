@@ -1831,5 +1831,4 @@ Item {
         duration: 250
         easing.type: Easing.OutBack
         easing.overshoot: 1.15
-    }
 }
