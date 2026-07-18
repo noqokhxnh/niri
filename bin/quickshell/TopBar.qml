@@ -1564,7 +1564,7 @@ Variants {
                                         width: Math.min(implicitWidth, barWindow.s(100)); elide: Text.ElideRight 
                                     }
                                 }
-                                MouseArea { id: btMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/niri/bin/qs_manager.sh toggle bluetooth"]) }
+                                MouseArea { id: btMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/niri/bin/qs_manager.sh toggle network bt"]) }
                             }
 
                             Rectangle {

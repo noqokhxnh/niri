@@ -198,7 +198,6 @@ binds {
 spawn-at-startup "/usr/lib/polkit-kde-authentication-agent-1"
 spawn-at-startup "awww-daemon"
 spawn-at-startup "/home/khxnh/.config/niri/bin/swayidle.sh"
-spawn-at-startup "swayosd-server"
 spawn-at-startup "quickshell" "-p" "/home/khxnh/.config/niri/bin/quickshell/Shell.qml"
 spawn-at-startup "/home/khxnh/.config/niri/bin/init.sh"
 spawn-at-startup "playerctld"
@@ -208,7 +207,6 @@ spawn-at-startup "/home/khxnh/.config/niri/bin/volume_listener.sh"
 spawn-at-startup "/home/khxnh/.config/niri/bin/update_notifier.sh"
 spawn-at-startup "/home/khxnh/.config/niri/bin/battery_power_saver.sh"
 spawn-at-startup "fcitx5" "-d"
-
 
 output "eDP-1" {
     mode "1920x1080@360"

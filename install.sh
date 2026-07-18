@@ -12,7 +12,7 @@ fi
 # set -e
 
 # Script Versioning & Initialization
-DOTS_VERSION="1.3.3"
+DOTS_VERSION="1.3.2"
 VERSION_FILE="$HOME/.local/state/lucretia-version"
 
 # Terminal UI Colors & Formatting

@@ -3,8 +3,6 @@
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QDBusObjectPath>
-#include <QDBusArgument>
-#include <QDBusVariant>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -175,66 +173,6 @@ public:
     }
 
     // --- BLUETOOTH LOGIC ---
-
-    // Helper: manually parse GetManagedObjects response a{oa{sa{sv}}}
-    struct BluezObject {
-        QMap<QString, QVariantMap> interfaces; // interface_name -> properties
-    };
-
-    QMap<QString, BluezObject> parseManagedObjects() {
-        QMap<QString, BluezObject> result;
-
-        QDBusInterface manager("org.bluez", "/", "org.freedesktop.DBus.ObjectManager", QDBusConnection::systemBus());
-        QDBusMessage reply = manager.call("GetManagedObjects");
-
-        if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().isEmpty())
-            return result;
-
-        const QDBusArgument arg = reply.arguments().at(0).value<QDBusArgument>();
-
-        arg.beginMap();
-        while (!arg.atEnd()) {
-            arg.beginMapEntry();
-
-            QDBusObjectPath objPath;
-            arg >> objPath;
-
-            QMap<QString, QVariantMap> interfaces;
-            arg.beginMap();
-            while (!arg.atEnd()) {
-                arg.beginMapEntry();
-
-                QString ifaceName;
-                arg >> ifaceName;
-
-                QVariantMap props;
-                arg.beginMap();
-                while (!arg.atEnd()) {
-                    arg.beginMapEntry();
-                    QString propName;
-                    QDBusVariant propValue;
-                    arg >> propName >> propValue;
-                    props[propName] = propValue.variant();
-                    arg.endMapEntry();
-                }
-                arg.endMap();
-
-                interfaces[ifaceName] = props;
-                arg.endMapEntry();
-            }
-            arg.endMap();
-
-            BluezObject obj;
-            obj.interfaces = interfaces;
-            result[objPath.path()] = obj;
-
-            arg.endMapEntry();
-        }
-        arg.endMap();
-
-        return result;
-    }
-
     QJsonObject getBtStatus() {
         QJsonObject root;
         root["present"] = false;
@@ -242,26 +180,24 @@ public:
         root["connected"] = QJsonArray();
         root["devices"] = QJsonArray();
 
-        auto objects = parseManagedObjects();
-        if (objects.isEmpty()) return root;
+        QDBusInterface manager("org.bluez", "/", "org.freedesktop.DBus.ObjectManager", QDBusConnection::systemBus());
+        QDBusReply<QMap<QDBusObjectPath, QMap<QString, QVariantMap>>> reply = manager.call("GetManagedObjects");
 
+        if (!reply.isValid()) return root;
+
+        auto objects = reply.value();
         QJsonArray connected;
         QJsonArray discovered;
 
-        // First pass: find adapter
         for (auto it = objects.begin(); it != objects.end(); ++it) {
-            auto &ifaces = it.value().interfaces;
-            if (ifaces.contains("org.bluez.Adapter1")) {
+            auto interfaces = it.value();
+            if (interfaces.contains("org.bluez.Adapter1")) {
                 root["present"] = true;
-                if (ifaces["org.bluez.Adapter1"]["Powered"].toBool()) root["power"] = "on";
+                if (interfaces["org.bluez.Adapter1"]["Powered"].toBool()) root["power"] = "on";
             }
-        }
-
-        // Second pass: find devices
-        for (auto it = objects.begin(); it != objects.end(); ++it) {
-            auto &ifaces = it.value().interfaces;
-            if (ifaces.contains("org.bluez.Device1")) {
-                auto props = ifaces["org.bluez.Device1"];
+            
+            if (interfaces.contains("org.bluez.Device1")) {
+                auto props = interfaces["org.bluez.Device1"];
                 QString mac = props["Address"].toString();
                 QString name = props["Name"].toString();
                 if (name.isEmpty()) name = props["Alias"].toString();
@@ -276,14 +212,8 @@ public:
                     dev["name"] = name;
                     dev["mac"] = mac;
                     dev["icon"] = icon;
-
-                    // Battery from org.bluez.Battery1 interface
-                    uint battery = 0;
-                    if (ifaces.contains("org.bluez.Battery1")) {
-                        battery = ifaces["org.bluez.Battery1"]["Percentage"].toUInt();
-                    }
-                    dev["battery"] = QString::number(battery);
-
+                    dev["battery"] = QString::number(props.contains("Battery") ? props["Battery"].toUInt() : 0);
+                    
                     // Profile (Approximation based on UUIDs or Class)
                     dev["profile"] = "Connected";
                     QStringList uuids = props["UUIDs"].toStringList();
@@ -320,13 +250,16 @@ public:
     }
 
     void toggleBt() {
-        auto objects = parseManagedObjects();
-        for (auto it = objects.begin(); it != objects.end(); ++it) {
-            if (it.value().interfaces.contains("org.bluez.Adapter1")) {
-                QDBusInterface adapter("org.bluez", it.key(), "org.bluez.Adapter1", QDBusConnection::systemBus());
-                bool powered = adapter.property("Powered").toBool();
-                adapter.setProperty("Powered", !powered);
-                break;
+        QDBusInterface manager("org.bluez", "/", "org.freedesktop.DBus.ObjectManager", QDBusConnection::systemBus());
+        QDBusReply<QMap<QDBusObjectPath, QMap<QString, QVariantMap>>> reply = manager.call("GetManagedObjects");
+        if (reply.isValid()) {
+            for (auto it = reply.value().begin(); it != reply.value().end(); ++it) {
+                if (it.value().contains("org.bluez.Adapter1")) {
+                    QDBusInterface adapter("org.bluez", it.key().path(), "org.bluez.Adapter1", QDBusConnection::systemBus());
+                    bool powered = adapter.property("Powered").toBool();
+                    adapter.setProperty("Powered", !powered);
+                    break;
+                }
             }
         }
     }
