@@ -1,5 +1,21 @@
 #!/usr/bin/env bash
 
+# ──────────────────────────────────────────────────────────────
+# POWER & THERMAL MANAGEMENT (chạy đầu tiên)
+# ──────────────────────────────────────────────────────────────
+# Mặc định power-saver để giảm nhiệt, chỉ lên balanced khi cần
+if command -v gdbus &>/dev/null; then
+    sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
+    sleep 0.5
+    gdbus call --system \
+        --dest net.hadess.PowerProfiles \
+        --object-path /net/hadess/PowerProfiles \
+        --method org.freedesktop.DBus.Properties.Set \
+        net.hadess.PowerProfiles \
+        ActiveProfile "<'power-saver'>" 2>/dev/null || true
+fi
+# ──────────────────────────────────────────────────────────────
+
 source "$(dirname "${BASH_SOURCE[0]}")/caching.sh"
 qs_ensure_cache "wallpaper_picker"
 

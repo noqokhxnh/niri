@@ -376,7 +376,7 @@ Variants {
 
             Timer {
                 id: teleportTimer
-                interval: 32 
+                interval: 48
                 onTriggered: {
                     floatingWidget.disableAnim = false;
                     if (floatingWidget.pendingMode === "sidebar") {

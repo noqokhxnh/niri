@@ -29,6 +29,22 @@ Item {
         from: 0; to: 1; duration: 600; easing.type: Easing.OutExpo; running: true 
     }
 
+    // Pin & Drag
+    property bool isPinned: false
+    property bool isMinimized: false
+    property real dragOffsetX: 0
+    property real dragOffsetY: 0
+    property real dragStartMouseX: 0
+    property real dragStartMouseY: 0
+    property real dragStartOffsetX: 0
+    property real dragStartOffsetY: 0
+    property bool isDragging: false
+
+    onIsPinnedChanged: {
+        let shellPath = Quickshell.env("HOME") + "/.config/niri/bin/quickshell/Shell.qml";
+        Quickshell.execDetached(["quickshell", "-p", shellPath, "ipc", "call", "main", "setWidgetPinned", isPinned ? "true" : "false"]);
+    }
+
     property string currentNoteId: ""
     property bool isSaving: false
     property bool isInitialLoad: true
@@ -49,6 +65,9 @@ Item {
         target: window
         function onVisibleChanged() {
             if (window.visible) {
+                if (window.isMinimized) {
+                    window.isMinimized = false;
+                }
                 introPhaseAnim.restart();
                 loadNotes();
             } else {
@@ -167,7 +186,7 @@ Item {
     }
 
     Rectangle {
-        anchors.centerIn: parent
+        id: card
         width: parent.width
         height: parent.height
         radius: 16
@@ -200,12 +219,14 @@ Item {
                     anchors.fill: parent
                     spacing: 0
 
-                    // Sidebar Header
+                    // Sidebar Header — draggable title bar with pin & create
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 70
-                        color: "transparent"
+                        color: dragHandle.containsMouse || dragHandle.pressed ? window.surface0 : "transparent"
+                        Behavior on color { ColorAnimation { duration: 150 } }
 
+                        // Title text
                         Text {
                             anchors.left: parent.left
                             anchors.leftMargin: 24
@@ -217,14 +238,48 @@ Item {
                             color: window.mauve
                         }
 
+                        // Pin button — always visible (opacity shows state)
                         Rectangle {
+                            id: pinBtn
+                            anchors.right: createBtn.left
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 34
+                            height: 34
+                            radius: 10
+                            color: pinMa.containsMouse ? (window.isPinned ? window.mauve : window.surface1) : (window.isPinned ? window.mauve : "transparent")
+                            Behavior on color { ColorAnimation { duration: 200 } }
+                            opacity: window.isPinned ? 1.0 : (pinMa.containsMouse ? 0.8 : 0.35)
+                            Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: window.isPinned ? "󰐃" : "󰐐" // filled pin / unfilled pin (Nerd Font)
+                                font.family: "Iosevka Nerd Font"
+                                font.pixelSize: 16
+                                color: pinMa.containsMouse ? window.crust : window.text
+                            }
+
+                            MouseArea {
+                                id: pinMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    window.isPinned = !window.isPinned;
+                                }
+                            }
+                        }
+
+                        // Create note button
+                        Rectangle {
+                            id: createBtn
                             anchors.right: parent.right
                             anchors.rightMargin: 20
                             anchors.verticalCenter: parent.verticalCenter
                             width: 34
                             height: 34
                             radius: 10
-                            color: btnMa.containsMouse ? window.mauve : window.surface1
+                            color: createMa.containsMouse ? window.mauve : window.surface1
                             Behavior on color { ColorAnimation { duration: 200 } }
 
                             Text {
@@ -233,14 +288,48 @@ Item {
                                 font.family: "Iosevka Nerd Font"
                                 font.pixelSize: 18
                                 font.weight: Font.Bold
-                                color: btnMa.containsMouse ? window.crust : window.text
+                                color: createMa.containsMouse ? window.crust : window.text
                             }
 
                             MouseArea {
-                                id: btnMa
+                                id: createMa
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 onClicked: createNote()
+                            }
+                        }
+
+                        // Drag handle — moves entire window (like PhotoBooth)
+                        MouseArea {
+                            id: dragHandle
+                            anchors.fill: parent
+                            anchors.rightMargin: 110 // leave room for pin + create buttons
+                            hoverEnabled: true
+                            cursorShape: Qt.SizeAllCursor
+
+                            property real lastGx: 0
+                            property real lastGy: 0
+
+                            onPressed: function(mouse) {
+                                let gp = mapToItem(null, mouse.x, mouse.y);
+                                lastGx = gp.x;
+                                lastGy = gp.y;
+                                masterWindow.disableMorph = true;
+                                window.isDragging = true;
+                            }
+                            onPositionChanged: function(mouse) {
+                                if (!window.isDragging) return;
+                                let gp = mapToItem(null, mouse.x, mouse.y);
+                                let dx = gp.x - lastGx;
+                                let dy = gp.y - lastGy;
+                                masterWindow.animX += dx;
+                                masterWindow.animY += dy;
+                                lastGx = gp.x;
+                                lastGy = gp.y;
+                            }
+                            onReleased: function(mouse) {
+                                masterWindow.disableMorph = false;
+                                window.isDragging = false;
                             }
                         }
                     }
@@ -392,22 +481,44 @@ Item {
                                 }
 
                                 Keys.onEscapePressed: {
-                                    Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/niri/bin/qs_manager.sh", "close"]);
+                                    if (window.isPinned) {
+                                        window.isMinimized = true;
+                                        // Minimize without clearing the stack (keeps loaded for restore)
+                                        let shellPath = Quickshell.env("HOME") + "/.config/niri/bin/quickshell/Shell.qml";
+                                        Quickshell.execDetached(["quickshell", "-p", shellPath, "ipc", "call", "main", "hideWidget", ""]);
+                                    } else {
+                                        Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/niri/bin/qs_manager.sh", "close"]);
+                                    }
                                     event.accepted = true;
                                 }
                             }
                         }
 
-                        // Saving indicator
-                        Text {
+                        // Bottom bar: pinned badge + saving indicator
+                        Row {
                             anchors.bottom: parent.bottom
                             anchors.right: parent.right
                             anchors.margins: 10
-                            text: window.isSaving ? "Saving..." : "Saved"
-                            font.family: "JetBrains Mono"
-                            font.pixelSize: 12
-                            color: window.surface2
-                            opacity: window.currentNoteId !== "" ? 1 : 0
+                            spacing: 12
+
+                            // Pinned badge
+                            Text {
+                                text: "󰐃 Pinned"
+                                font.family: "Iosevka Nerd Font"
+                                font.pixelSize: 12
+                                color: window.mauve
+                                visible: window.isPinned
+                                opacity: window.currentNoteId !== "" ? 1 : 0
+                            }
+
+                            // Saving indicator
+                            Text {
+                                text: window.isSaving ? "Saving..." : "Saved"
+                                font.family: "JetBrains Mono"
+                                font.pixelSize: 12
+                                color: window.surface2
+                                opacity: window.currentNoteId !== "" ? 1 : 0
+                            }
                         }
                     }
                 }

@@ -1531,4 +1531,192 @@ Item {
             }
         }
     }
+
+    // =======================================================
+    // FLOATING PREVIEW TOOLTIP
+    // =======================================================
+    Rectangle {
+        id: tooltipItem
+        x: window.tooltipX
+        y: window.tooltipY
+        width: Math.min(Math.round(480 * window.sf), tooltipTextLabel.implicitWidth + Math.round(24 * window.sf))
+        height: Math.min(Math.round(360 * window.sf), tooltipTextLabel.implicitHeight + Math.round(20 * window.sf))
+        radius: Math.round(8 * window.sf)
+        color: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.95)
+        border.color: window.surface2
+        border.width: 1
+        visible: window.tooltipVisible && window.tooltipText !== ""
+        z: 9999
+
+        Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+        Behavior on y { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: 150 } }
+        opacity: visible ? 1.0 : 0.0
+
+        Text {
+            id: tooltipTextLabel
+            anchors.fill: parent
+            anchors.margins: Math.round(8 * window.sf)
+            text: window.tooltipText
+            color: window.text
+            font.family: "JetBrains Mono"
+            font.pixelSize: Math.round(11 * window.sf)
+            wrapMode: Text.Wrap
+            elide: Text.ElideRight
+            maximumLineCount: 16
+            textFormat: Text.PlainText
+        }
+    }
+
+    // =======================================================
+    // NOTE EDITOR MODAL DIALOG
+    // =======================================================
+    Rectangle {
+        id: noteEditorOverlay
+        anchors.fill: parent
+        color: Qt.rgba(window.base.r, window.base.g, window.base.b, 0.6)
+        visible: window.noteEditorOpen
+        z: 10000
+        opacity: visible ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+
+        // Dim background mouse eater
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                window.noteEditorOpen = false;
+            }
+        }
+
+        Rectangle {
+            id: noteEditorCard
+            anchors.centerIn: parent
+            width: Math.round(560 * window.sf)
+            height: Math.round(480 * window.sf)
+            radius: Math.round(16 * window.sf)
+            color: window.surface0
+            border.color: window.surface2
+            border.width: 1
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: Math.round(18 * window.sf)
+                spacing: Math.round(12 * window.sf)
+
+                Text {
+                    text: "Note for: " + window.activeNoteDate
+                    font.family: "Outfit"
+                    font.pixelSize: Math.round(16 * window.sf)
+                    font.weight: Font.Bold
+                    color: window.mauve
+                    Layout.fillWidth: true
+                }
+
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+
+                    TextArea {
+                        id: noteTextArea
+                        text: window.activeNoteText
+                        font.family: "JetBrains Mono"
+                        font.pixelSize: Math.round(12 * window.sf)
+                        color: window.text
+                        wrapMode: TextEdit.Wrap
+                        placeholderText: "Enter notes here..."
+                        placeholderTextColor: window.overlay0
+                        
+                        background: Rectangle {
+                            color: window.base
+                            radius: Math.round(8 * window.sf)
+                            border.color: noteTextArea.activeFocus ? window.mauve : window.surface1
+                            border.width: 1
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: Math.round(12 * window.sf)
+
+                    Item { Layout.fillWidth: true } // spacer
+
+                    Rectangle {
+                        width: Math.round(80 * window.sf)
+                        height: Math.round(32 * window.sf)
+                        radius: Math.round(8 * window.sf)
+                        color: cancelMa.containsMouse ? window.surface2 : window.surface1
+                        border.color: window.surface2
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Cancel"
+                            font.family: "Outfit"
+                            font.pixelSize: Math.round(13 * window.sf)
+                            font.weight: Font.Medium
+                            color: window.text
+                        }
+
+                        MouseArea {
+                            id: cancelMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                window.noteEditorOpen = false;
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: Math.round(80 * window.sf)
+                        height: Math.round(32 * window.sf)
+                        radius: Math.round(8 * window.sf)
+                        color: saveMa.containsMouse ? Qt.lighter(window.mauve, 1.1) : window.mauve
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "Save"
+                            font.family: "Outfit"
+                            font.pixelSize: Math.round(13 * window.sf)
+                            font.weight: Font.Bold
+                            color: window.base
+                        }
+
+                        MouseArea {
+                            id: saveMa
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                window.saveNote(window.activeNoteDate, noteTextArea.text);
+                                window.noteEditorOpen = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Dialog scale popup animation
+    onNoteEditorOpenChanged: {
+        if (noteEditorOpen) {
+            dialogScaleAnim.restart();
+        }
+    }
+
+    NumberAnimation {
+        id: dialogScaleAnim
+        target: noteEditorCard
+        property: "scale"
+        from: 0.92
+        to: 1.0
+        duration: 250
+        easing.type: Easing.OutBack
+        easing.overshoot: 1.15
+    }
+
 }
