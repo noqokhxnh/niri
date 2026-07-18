@@ -2,9 +2,9 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../../caching.sh"
 
 # Singleton lock: chỉ 1 instance network_wait.sh được chạy cùng lúc
-# LOCK="$QS_RUN_DIR/qs_network_wait.lock"
-# exec 9>"$LOCK"
-# flock -n 9 || { sleep infinity; exit 0; }
+LOCK="$QS_RUN_DIR/qs_network_wait.lock"
+exec 9>"$LOCK"
+flock -n 9 || { sleep infinity; exit 0; }
 
 PIPE="$QS_RUN_DIR/qs_network_wait_$$.fifo"
 mkfifo "$PIPE" 2>/dev/null

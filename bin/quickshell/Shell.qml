@@ -5,24 +5,32 @@ import Quickshell.Io
 import "watchers" as Watchers
 import "overview" as OverviewModule
 
-
 ShellRoot {
     Connections {
         target: Quickshell
-        function onReloadCompleted() { Quickshell.inhibitReloadPopup() }
-        function onReloadFailed(errorString) { Quickshell.inhibitReloadPopup() }
+        function onReloadCompleted() {
+            Quickshell.inhibitReloadPopup();
+        }
+        function onReloadFailed(errorString) {
+            Quickshell.inhibitReloadPopup();
+        }
     }
 
-    Caching { id: paths }
-    
+    Caching {
+        id: paths
+    }
+
+    property int restartCount: 0
+    property real lastRestartTime: 0
+
     Process {
         id: zombieCleanup
-        command: ["bash", "-c", "pkill -f 'inotifywait.*quickshell'; pkill -f 'watchers/.*_wait.sh'; pkill -f 'dbus-monitor.*org.bluez'; pkill -f 'nmcli monitor'; pkill -f 'udevadm monitor'; pkill -f 'pactl subscribe'; pkill -f 'socat.*socket2.sock'; pkill -x qs_daemon; rm -f \"${XDG_RUNTIME_DIR:-/tmp}/quickshell/qs_\"*\".lock\"; rm -rf ~/.cache/quickshell/crashes/*"]
+        command: ["bash", "-c", "pkill -f 'inotifywait.*quickshell|watchers/.*_wait.sh|dbus-monitor.*org.bluez|nmcli monitor|udevadm monitor|pactl subscribe|socat.*socket2.sock|qs_daemon'; rm -f \"${XDG_RUNTIME_DIR:-/tmp}/quickshell/qs_\"*\".lock\"; rm -rf ~/.cache/quickshell/crashes/*"]
         running: true
         onExited: {
-            qsDaemon.running = true
-            wsDaemon.running = true
-            mainLoader.active = true
+            qsDaemon.running = true;
+            wsDaemon.running = true;
+            mainLoader.active = true;
         }
     }
 
@@ -36,10 +44,21 @@ ShellRoot {
         id: qsDaemon
         command: [Quickshell.env("HOME") + "/.config/niri/bin/quickshell/qs_daemon"]
         running: false
-        onExited: (exitCode) => {
-            console.log("qs_daemon exited with code: " + exitCode + ". Restarting...")
-            running = false
-            restartTimer.start()
+        onExited: exitCode => {
+            let now = Date.now();
+            if (now - lastRestartTime < 5000) {
+                restartCount++;
+            } else {
+                restartCount = 0;
+            }
+            lastRestartTime = now;
+
+            let delay = Math.min(1000 * Math.pow(2, restartCount), 30000);
+            console.log("qs_daemon exited with code: " + exitCode + ". Restarting in " + (delay / 1000) + "s...");
+
+            restartTimer.interval = delay;
+            running = false;
+            restartTimer.start();
         }
     }
 
@@ -65,4 +84,3 @@ ShellRoot {
         }
     }
 }
-

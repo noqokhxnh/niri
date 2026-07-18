@@ -1851,20 +1851,21 @@ Item {
                                 }
 
                                 Rectangle {
+                                    id: highlightBorder
                                     anchors.fill: parent
                                     radius: parent.radius
                                     color: "transparent"
                                     border.color: window.activeColor
                                     border.width: window.s(2)
-                                    visible: parent.isHighlighted && !parent.isMyBusy && !parent.isCurrentlyConnected && !parent.isFailed
+                                    visible: floatCard.isHighlighted && !floatCard.isMyBusy && !floatCard.isCurrentlyConnected && !floatCard.isFailed
                                     
                                     SequentialAnimation on scale {
-                                        loops: Animation.Infinite; running: parent.visible
+                                        loops: Animation.Infinite; running: highlightBorder.visible
                                         NumberAnimation { to: 1.15; duration: 1200; easing.type: Easing.InOutSine }
                                         NumberAnimation { to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
                                     }
                                     SequentialAnimation on opacity {
-                                        loops: Animation.Infinite; running: parent.visible
+                                        loops: Animation.Infinite; running: highlightBorder.visible
                                         NumberAnimation { to: 0.0; duration: 1200; easing.type: Easing.InOutSine }
                                         NumberAnimation { to: 0.8; duration: 1200; easing.type: Easing.InOutSine }
                                     }

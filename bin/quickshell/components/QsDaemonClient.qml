@@ -54,6 +54,10 @@ Item {
     property int nextRequestId: 1
     property var pendingCallbacks: ({})
 
+    // JSON cache to skip redundant property updates that trigger QML binding cascades
+    property string _lastMusicJson: ""
+    property string _lastSysdataJson: ""
+
     // --- UNIX Local Socket Connection ---
     Socket {
         id: daemonSocket
@@ -75,11 +79,21 @@ Item {
                         let payload = parsed.data;
 
                         if (eventType === "sysdata" || eventType === "sys_data") {
-                            root.sysData = payload;
-                            root.sysDataReceived(payload);
+                            // Skip if unchanged to prevent QML binding cascades
+                            let sysJson = JSON.stringify(payload);
+                            if (sysJson !== root._lastSysdataJson) {
+                                root._lastSysdataJson = sysJson;
+                                root.sysData = payload;
+                                root.sysDataReceived(payload);
+                            }
                         } else if (eventType === "music" || eventType === "music_state") {
-                            root.musicState = payload;
-                            root.musicStateReceived(payload);
+                            // Skip if unchanged (daemon sends every 1s even when idle)
+                            let mJson = JSON.stringify(payload);
+                            if (mJson !== root._lastMusicJson) {
+                                root._lastMusicJson = mJson;
+                                root.musicState = payload;
+                                root.musicStateReceived(payload);
+                            }
                         } else if (eventType === "eq_state") {
                             root.eqStateReceived(payload);
                         } else if (eventType === "focus_stats") {

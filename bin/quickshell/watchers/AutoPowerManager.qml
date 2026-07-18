@@ -7,6 +7,7 @@ Item {
 
     property string lastAppliedProfile: ""
     property int lowLoadTicks: 0
+    property double _lastSwitchTime: 0
 
     Timer {
         id: monitorTimer
@@ -20,8 +21,13 @@ Item {
             let temp = SysData.temp;
             let targetProfile = "";
 
+            // Debounce: skip evaluation if CPU/temp is still changing rapidly
+            // (quiet period after the last profile switch)
+            let now = Date.now();
+            if (now - manager._lastSwitchTime < 30000) return;
+
             // 1. Peak Load Condition (Instant transition to performance)
-            if (cpu >= 70 || temp >= 70) {
+            if (cpu >= 75 || temp >= 75) {
                 targetProfile = "performance";
                 manager.lowLoadTicks = 0;
             }
@@ -40,7 +46,7 @@ Item {
 
                 if (manager.lastAppliedProfile === "performance") {
                     // Hysteresis: only drop down to balanced if it cools down enough
-                    if (cpu < 50 && temp < 60) {
+                    if (cpu < 45 && temp < 60) {
                         targetProfile = "balanced";
                     } else {
                         targetProfile = "performance";
@@ -60,6 +66,7 @@ Item {
 
             // If profile changed, execute powerprofilesctl and send notification
             if (targetProfile !== "" && targetProfile !== manager.lastAppliedProfile) {
+                manager._lastSwitchTime = Date.now();
                 manager.lastAppliedProfile = targetProfile;
                 console.log("[AutoPowerManager] CPU: " + cpu + "%, Temp: " + temp + "°C -> Switching to " + targetProfile);
                 Config.powerProfile = targetProfile;
@@ -81,7 +88,7 @@ Item {
                 if (targetProfile !== "balanced" && Config.autoPowerNotify) {
                     // Send/replace the notification for Performance or Power Saver using a unique ID (99102)
                     let label = targetProfile === "power-saver" ? "Power Saver" : "Performance";
-                    Quickshell.execDetached(["notify-send", "-r", "99102", " " + label, "CPU: " + cpu + "% | Temp: " + temp + "°C"]);
+                    Quickshell.execDetached(["notify-send", "-r", "99102", "-t", "2000", " " + label, "CPU: " + cpu + "% | Temp: " + temp + "°C"]);
                 }
             }
         }

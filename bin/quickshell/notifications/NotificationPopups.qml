@@ -55,21 +55,23 @@ PanelWindow {
     focusable: false
     color: "transparent"
 
-    width: popupWindow.layoutConfig.w
-    height: Math.min(popupList.contentHeight, Screen.height * 0.8)
+    implicitWidth: Math.min(popupWindow.layoutConfig.w, Screen.width)
+    implicitHeight: Math.min(popupList.contentHeight, Screen.height * 0.8)
 
     property bool dndEnabled: false
 
+    // Watch DND state file with inotifywait — single process, zero polling overhead
     Process {
         id: dndPoller
-        command: ["bash", "-c", "cat '" + paths.getCacheDir("dnd") + "/state' 2>/dev/null || echo '0'"]
-        stdout: StdioCollector {
-            onStreamFinished: popupWindow.dndEnabled = (this.text.trim() === "1")
+        command: ["bash", "-c", "state_file='" + paths.getCacheDir("dnd") + "/state'; mkdir -p \"$(dirname \"$state_file\")\"; touch \"$state_file\"; val=$(cat \"$state_file\" 2>/dev/null || echo '0'); [ -z \"$val\" ] && val='0'; echo \"$val\"; while true; do inotifywait -qq -e modify,close_write \"$state_file\" 2>/dev/null || sleep 1; val=$(cat \"$state_file\" 2>/dev/null || echo '0'); [ -z \"$val\" ] && val='0'; echo \"$val\"; done"]
+        running: true
+        stdout: SplitParser {
+            splitMarker: "\n"
+            onRead: (data) => {
+                let val = data ? data.trim() : '';
+                if (val === "0" || val === "1") popupWindow.dndEnabled = (val === "1");
+            }
         }
-    }
-    Timer {
-        interval: 1000; running: true; repeat: true; triggeredOnStart: true
-        onTriggered: dndPoller.running = true
     }
 
     Item {
@@ -175,18 +177,27 @@ PanelWindow {
                     }
                 }
 
-                Timer {
-                    id: progressTimer
-                    interval: 32 // ~30fps for ultra-low CPU overhead
-                    running: delegateRoot.effectiveTimeout > 0 && !cardMouseArea.containsMouse
-                    repeat: true
-                    onTriggered: {
-                        delegateRoot.progress -= 32 / delegateRoot.effectiveTimeout;
-                        if (delegateRoot.progress <= 0) {
-                            delegateRoot.progress = 0;
-                            running = false;
-                            popupWindow.removeNotif(delegateRoot.popupUid);
-                        }
+                // Smooth progress animation — uses Qt scene graph, no JS timer ticks
+                property bool _progressActive: delegateRoot.effectiveTimeout > 0 && !cardMouseArea.containsMouse
+                on_ProgressActiveChanged: {
+                    if (_progressActive) {
+                        delegateRoot.progress = 1.0;
+                        progressAnim.restart();
+                    } else {
+                        progressAnim.stop();
+                    }
+                }
+
+                NumberAnimation {
+                    id: progressAnim
+                    target: delegateRoot
+                    property: "progress"
+                    from: 1.0; to: 0.0
+                    duration: delegateRoot.effectiveTimeout
+                    easing.type: Easing.Linear
+                    onFinished: {
+                        delegateRoot.progress = 0;
+                        popupWindow.removeNotif(delegateRoot.popupUid);
                     }
                 }
 
@@ -452,9 +463,8 @@ PanelWindow {
                                 GradientStop { position: 1.0; color: Qt.lighter(delegateRoot.dynamicAccentColor, 1.25) }
                             }
 
-                            Behavior on width {
-                                NumberAnimation { duration: 32; easing.type: Easing.Linear }
-                            }
+                            // progress is now driven by a smooth NumberAnimation; no tick-smoothing needed
+                            Behavior on width {} // default smooth transition, harmless
                         }
                     }
                 }

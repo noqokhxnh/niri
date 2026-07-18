@@ -45,19 +45,25 @@ Item {
         let safeValue = typeof value === "string" ? `"${value}"` : value;
         if (typeof value === "object") safeValue = JSON.stringify(value).replace(/'/g, "'\\''");
 
-        let cmd = `mkdir -p "$(dirname '${settingsJsonPath}')" && ` +
-                  `[ ! -f '${settingsJsonPath}' ] && echo '{}' > '${settingsJsonPath}'; ` +
+        let lockPath = settingsJsonPath + ".lock";
+        let cmd = `( flock 9; ` +
+                  `mkdir -p "$(dirname '${settingsJsonPath}')"; ` +
+                  `[ ! -s '${settingsJsonPath}' ] && echo '{}' > '${settingsJsonPath}'; ` +
                   `jq '. + {"${key}": ${safeValue}}' '${settingsJsonPath}' > '${settingsJsonPath}.tmp' && ` +
-                  `mv '${settingsJsonPath}.tmp' '${settingsJsonPath}'`;
+                  `mv '${settingsJsonPath}.tmp' '${settingsJsonPath}' ` +
+                  `) 9>'${lockPath}'`;
         sh(cmd);
     }
 
     function updateJsonBulk(dataObj) {
         let jsonStr = JSON.stringify(dataObj).replace(/'/g, "'\\''");
-        let cmd = `mkdir -p "$(dirname '${settingsJsonPath}')" && ` +
-                  `[ ! -f '${settingsJsonPath}' ] && echo '{}' > '${settingsJsonPath}'; ` +
+        let lockPath = settingsJsonPath + ".lock";
+        let cmd = `( flock 9; ` +
+                  `mkdir -p "$(dirname '${settingsJsonPath}')"; ` +
+                  `[ ! -s '${settingsJsonPath}' ] && echo '{}' > '${settingsJsonPath}'; ` +
                   `jq '. + ${jsonStr}' '${settingsJsonPath}' > '${settingsJsonPath}.tmp' && ` +
-                  `mv '${settingsJsonPath}.tmp' '${settingsJsonPath}'`;
+                  `mv '${settingsJsonPath}.tmp' '${settingsJsonPath}' ` +
+                  `) 9>'${lockPath}'`;
         sh(cmd);
         
         for (let key in dataObj) rawSettings[key] = dataObj[key];
@@ -108,7 +114,7 @@ Item {
     property real animSpeedMultiplier: 1.0
     property string themeMode: "auto" // auto, light, dark
     property bool autoPowerMode: false
-    property bool autoPowerNotify: true
+    property bool autoPowerNotify: false
     property bool autoBatterySaver: true
     property bool beautifyScreenshot: true
     property bool dndMode: false
@@ -173,7 +179,6 @@ Item {
         };
 
         config.updateJsonBulk(configObj);
-        sh("notify-send 'Quickshell' 'Settings Applied Successfully!'");
         // Idle timeouts are now set statically in bin/swayidle.sh
 
         if (config.workspaceCount !== config.initialWorkspaceCount) {
@@ -196,19 +201,19 @@ Item {
         
         config.updateEnvBulk(config.weatherEnvPath, envs);
         sh(`rm -rf "${paths.getCacheDir('weather')}"`);
-        sh("notify-send 'Weather' 'API configuration saved successfully!'");
+        // Weather config saved silently
     }
 
     function saveAllKeybinds(bindsArray) {
         config.keybindsData = bindsArray;
         config.setSetting("keybinds", bindsArray);
-        sh("notify-send 'Quickshell' 'Keybinds Saved Successfully!'");
+        // Keybinds saved silently
     }
 
     function saveAllStartup(startupArray) {
         config.startupData = startupArray;
         config.setSetting("startup", startupArray);
-        sh("notify-send 'Quickshell' 'Startup entries saved!'");
+        // Startup entries saved silently
     }
 
     // =========================================================================

@@ -243,10 +243,9 @@ PanelWindow {
             let currentUid = masterWindow._popupCounter;
 
             // Track DBus id → uid so updates won't re-insert
+            // Mutate in-place; _notifIdMap is only used via function access, never QML bindings
             if (dbusId !== -1) {
-                let updatedMap = Object.assign({}, masterWindow._notifIdMap);
-                updatedMap[dbusId] = currentUid;
-                masterWindow._notifIdMap = updatedMap;
+                masterWindow._notifIdMap[dbusId] = currentUid;
             }
 
             masterWindow.liveNotifs[currentUid] = n;
@@ -476,12 +475,22 @@ PanelWindow {
         masterWindow.targetH = t.h;
 
         let props = {};
-        props["layoutWidth"]  = t.w;
-        props["layoutHeight"] = t.h;
+        // Only pass properties that each widget actually declares
         if (newWidget === "battery" || newWidget === "photobooth") {
+            props["layoutWidth"]  = t.w;
+            props["layoutHeight"] = t.h;
             props["notifModel"]   = masterWindow.notifModel;
             props["liveNotifs"]   = masterWindow.liveNotifs;
             props["notifIdMap"]   = masterWindow._notifIdMap;
+        } else {
+            // Only pass layout dimensions to widgets that define them
+            let layoutWidgets = ["calendar", "music", "volume", "network", "notes", "settings",
+                "controlcenter", "monitors", "dashboard", "clipboard", "guide", "services", "wallpaper",
+                "focustime", "applauncher"];
+            if (layoutWidgets.indexOf(newWidget) !== -1) {
+                props["layoutWidth"]  = t.w;
+                props["layoutHeight"] = t.h;
+            }
         }
         if (newWidget === "wallpaper") props["widgetArg"] = arg;
 
