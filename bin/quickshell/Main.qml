@@ -22,6 +22,14 @@ PanelWindow {
             Quickshell.reload(true)
         }
 
+        function hideWidget(): void {
+            masterWindow.isVisible = false;
+        }
+
+        function setWidgetPinned(val: string): void {
+            masterWindow.widgetPinned = (val === "true");
+        }
+
         function handleCommand(cmd: string, targetWidget: string, arg: string): void {
             cmd = cmd || "";
             targetWidget = targetWidget || "";
@@ -118,7 +126,7 @@ PanelWindow {
 
     MouseArea {
         anchors.fill: parent
-        enabled: masterWindow.isVisible
+        enabled: masterWindow.isVisible && !masterWindow.widgetPinned
         onClicked: switchWidget("hidden", "")
     }
 
@@ -133,6 +141,7 @@ PanelWindow {
     property bool isVisible: false
     property string activeArg: ""
     property bool disableMorph: false
+    property bool widgetPinned: false
 
     readonly property int scaledMorphDuration: Math.round(230 / Config.animSpeedMultiplier)
     readonly property int scaledMorphDurationSwitch: Math.round(210 / Config.animSpeedMultiplier)
@@ -330,7 +339,7 @@ PanelWindow {
         y: masterWindow.animY
         width:  masterWindow.animW
         height: masterWindow.animH
-        clip: true
+        clip: !masterWindow.widgetPinned
 
         Behavior on x {
             enabled: !masterWindow.disableMorph
@@ -366,6 +375,7 @@ PanelWindow {
                 id: widgetStack
                 anchors.fill: parent
                 focus: true
+                clip: !masterWindow.widgetPinned
 
                  Keys.onEscapePressed: (event) => {
                      switchWidget("hidden", "");
@@ -374,6 +384,7 @@ PanelWindow {
 
                 onCurrentItemChanged: {
                     if (currentItem) currentItem.forceActiveFocus();
+                    masterWindow.widgetPinned = false;
                 }
 
                 replaceEnter: Transition {

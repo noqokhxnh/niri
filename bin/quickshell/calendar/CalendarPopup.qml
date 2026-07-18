@@ -1653,8 +1653,8 @@ Item {
         id: tooltipItem
         x: window.tooltipX
         y: window.tooltipY
-        width: Math.min(Math.round(220 * window.sf), tooltipTextLabel.implicitWidth + Math.round(16 * window.sf))
-        height: tooltipTextLabel.implicitHeight + Math.round(12 * window.sf)
+        width: Math.min(Math.round(480 * window.sf), tooltipTextLabel.implicitWidth + Math.round(24 * window.sf))
+        height: Math.min(Math.round(360 * window.sf), tooltipTextLabel.implicitHeight + Math.round(20 * window.sf))
         radius: Math.round(8 * window.sf)
         color: Qt.rgba(window.surface0.r, window.surface0.g, window.surface0.b, 0.95)
         border.color: window.surface2
@@ -1677,7 +1677,8 @@ Item {
             font.pixelSize: Math.round(11 * window.sf)
             wrapMode: Text.Wrap
             elide: Text.ElideRight
-            maximumLineCount: 4
+            maximumLineCount: 16
+            textFormat: Text.PlainText
         }
     }
 
@@ -1704,8 +1705,8 @@ Item {
         Rectangle {
             id: noteEditorCard
             anchors.centerIn: parent
-            width: Math.round(380 * window.sf)
-            height: Math.round(280 * window.sf)
+            width: Math.round(560 * window.sf)
+            height: Math.round(480 * window.sf)
             radius: Math.round(16 * window.sf)
             color: window.surface0
             border.color: window.surface2
@@ -1732,8 +1733,9 @@ Item {
 
                     TextArea {
                         id: noteTextArea
+                        text: window.activeNoteText
                         font.family: "JetBrains Mono"
-                        font.pixelSize: Math.round(13 * window.sf)
+                        font.pixelSize: Math.round(12 * window.sf)
                         color: window.text
                         wrapMode: TextEdit.Wrap
                         placeholderText: "Enter notes here..."

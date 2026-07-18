@@ -21,39 +21,40 @@ Item {
             let targetProfile = "";
 
             // 1. Peak Load Condition (Instant transition to performance)
-            if (cpu >= 80 || temp >= 75) {
+            if (cpu >= 70 || temp >= 70) {
                 targetProfile = "performance";
-                manager.lowLoadTicks = 0; 
+                manager.lowLoadTicks = 0;
             }
             // 2. Idle Load Condition (Sustained low load required for power-saver)
-            else if (cpu <= 15 && temp <= 55) {
+            else if (cpu <= 25 && temp <= 50) {
                 manager.lowLoadTicks++;
-                if (manager.lowLoadTicks >= 3) { // 15 seconds sustained
+                if (manager.lowLoadTicks >= 2) { // 10 seconds sustained
                     targetProfile = "power-saver";
                 } else {
-                    targetProfile = manager.lastAppliedProfile !== "" ? manager.lastAppliedProfile : "balanced";
+                    targetProfile = manager.lastAppliedProfile !== "" ? manager.lastAppliedProfile : "power-saver";
                 }
             }
             // 3. Normal / Transition Conditions
             else {
-                manager.lowLoadTicks = 0; 
-                
+                manager.lowLoadTicks = 0;
+
                 if (manager.lastAppliedProfile === "performance") {
                     // Hysteresis: only drop down to balanced if it cools down enough
-                    if (cpu < 65 && temp < 68) {
+                    if (cpu < 50 && temp < 60) {
                         targetProfile = "balanced";
                     } else {
-                        targetProfile = "performance"; 
+                        targetProfile = "performance";
                     }
-                } else if (manager.lastAppliedProfile === "power-saver") {
-                    // Wake up: instantly go to balanced if CPU/temp rise slightly
-                    if (cpu > 30 || temp > 60) {
-                        targetProfile = "balanced";
+                } else if (manager.lastAppliedProfile === "balanced") {
+                    // From balanced: go to power-saver if cool enough
+                    if (cpu < 25 && temp < 50) {
+                        targetProfile = "power-saver";
                     } else {
-                        targetProfile = "power-saver"; 
+                        targetProfile = "balanced";
                     }
                 } else {
-                    targetProfile = "balanced";
+                    // Default: power-saver (tiết kiệm nhiệt)
+                    targetProfile = "power-saver";
                 }
             }
 
