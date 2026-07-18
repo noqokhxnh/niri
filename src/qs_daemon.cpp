@@ -1261,7 +1261,7 @@ public:
         // Periodically broadcast resource utilization to subscribed clients
         QTimer* sysTimer = new QTimer(this);
         connect(sysTimer, &QTimer::timeout, this, &DaemonServer::broadcastSysData);
-        sysTimer->start(2000);
+        sysTimer->start(4000);
 
         // Periodically broadcast music position/track state to subscribed clients
         QTimer* musicTimer = new QTimer(this);

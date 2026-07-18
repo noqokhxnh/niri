@@ -34,6 +34,7 @@ function getLayout(name, mx, my, mw, mh, userScale) {
         // --- Top Right Popups ---
         "battery":   { w: s(801, scale), h: s(760, scale), rx: mw - s(805, scale), ry: s(60, scale), comp: "battery/BatteryPopup.qml" },
         "network":   { w: s(900, scale), h: s(700, scale), rx: mw - s(904, scale), ry: s(60, scale), comp: "network/NetworkPopup.qml" },
+        "bluetooth": { w: s(900, scale), h: s(700, scale), rx: mw - s(904, scale), ry: s(60, scale), comp: "network/BluetoothPopup.qml" },
         "volume":    { w: s(450, scale), h: s(700, scale), rx: mw - s(455, scale), ry: s(60, scale), comp: "volume/VolumePopup.qml" },
         "controlcenter": { w: s(420, scale), h: s(580, scale), rx: Math.floor((mw/2)-(s(420, scale)/2)), ry: Math.floor((mh/2)-(s(580, scale)/2)), comp: "controlcenter/ControlCenterPopup.qml" },
         
