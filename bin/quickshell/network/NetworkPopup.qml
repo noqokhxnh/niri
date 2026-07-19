@@ -27,7 +27,6 @@ Item {
                 window.pendingWifiId = ""; window.pendingWifiSsid = "";
                 return;
             }
-            // window.playSfx("switch.wav"); // Disabled tab switch sound
             let modes = [];
             if (window.ethPresent) modes.push("eth");
             if (window.wifiPresent) modes.push("wifi");
@@ -38,6 +37,7 @@ Item {
                 if (window.activeMode !== nextMode) {
                     window.powerAnimAllowed = false;
                     powerAnimBlocker.restart();
+                    if (nextMode !== "bt") window.playSfx("switch.wav");
                     window.activeMode = nextMode;
                 }
             }
@@ -122,19 +122,7 @@ Item {
         }
     }
 
-    Process {
-        id: modeWatcher
-        running: true
-        command: ["bash", "-c", "f='" + window.modeFilePath + "'; mkdir -p $(dirname \"$f\") && touch \"$f\" && exec inotifywait -qq -e close_write,modify \"$f\" 2>/dev/null || sleep 2"]
-        onExited: exitCode => {
-            if (exitCode === 0) {
-                modeReader.running = false;
-                modeReader.running = true;
-                running = false;
-                running = true;
-            }
-        }
-    }
+    Timer { interval: 100; running: true; repeat: true; onTriggered: modeReader.running = true }
 
     Component.onCompleted: {
         window.powerAnimAllowed = false;
@@ -168,13 +156,7 @@ Item {
 
 
     function playSfx(filename) {
-        try {
-            let rawUrl = Qt.resolvedUrl("sounds/" + filename).toString();
-            let cleanPath = rawUrl;
-            if (cleanPath.indexOf("file://") === 0) cleanPath = cleanPath.substring(7); 
-            let cmd = "pw-play '" + cleanPath + "' 2>/dev/null || paplay '" + cleanPath + "' 2>/dev/null";
-            Quickshell.execDetached(["sh", "-c", cmd]);
-        } catch(e) {}
+        // Sound effects disabled
     }
 
     MatugenColors { id: _theme }
@@ -197,12 +179,12 @@ Item {
     readonly property color maroon: _theme.maroon
     readonly property color peach: _theme.peach
 
-    readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/niri/bin/quickshell/network"
+    readonly property string scriptsDir: Quickshell.env("HOME") + "/.config/hypr/scripts/quickshell/network"
     
     readonly property color sharedAccent: Qt.lighter(window.sapphire, 1.15) 
     readonly property color btAccent: window.mauve
 
-    property string activeMode: "wifi"
+    property string activeMode: "bt"
     readonly property color activeColor: activeMode === "bt" ? window.btAccent : window.sharedAccent
     readonly property color activeGradientSecondary: Qt.darker(window.activeColor, 1.25)
 
@@ -281,15 +263,15 @@ Item {
         connectProcess.targetSsid = (mode === "wifi") ? macOrSsid : ""; 
         
         if (mode === "eth") {
-            connectProcess.command = [window.scriptsDir + "/network_backend", "--eth-connect", macOrSsid];
+            connectProcess.command = ["bash", "-c", "nmcli device connect '" + macOrSsid + "'"];
         } else if (mode === "wifi") {
             if (password !== "") {
-                connectProcess.command = [window.scriptsDir + "/network_backend", "--wifi-connect", macOrSsid, password];
+                connectProcess.command = ["bash", "-c", "nmcli device wifi connect '" + macOrSsid + "' password '" + password + "'"];
             } else {
-                connectProcess.command = [window.scriptsDir + "/network_backend", "--wifi-connect", macOrSsid];
+                connectProcess.command = ["bash", "-c", "nmcli device wifi connect '" + macOrSsid + "'"];
             }
         } else {
-            connectProcess.command = [window.scriptsDir + "/network_backend", "--bt-connect", macOrSsid];
+            connectProcess.command = ["bash", "-c", window.scriptsDir + "/bluetooth_panel_logic.sh --connect '" + macOrSsid + "'"];
         }
         connectProcess.running = true;
     }
@@ -777,7 +759,7 @@ Item {
 
     Process {
         id: ethPoller
-        command: [window.scriptsDir + "/network_backend", "--eth-status"]
+        command: ["bash", window.scriptsDir + "/eth_panel_logic.sh"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -789,7 +771,7 @@ Item {
 
     Process {
         id: wifiPoller
-        command: [window.scriptsDir + "/network_backend", "--wifi-status"]
+        command: ["bash", window.scriptsDir + "/wifi_panel_logic.sh"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -801,7 +783,7 @@ Item {
 
     Process {
         id: btPoller
-        command: [window.scriptsDir + "/network_backend", "--bt-status"]
+        command: ["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--status"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -821,24 +803,15 @@ Item {
         }
     }
 
-    // PERF: Replaced continuous NumberAnimation (60fps) with Timer-based updates (10fps).
-    // This eliminates per-frame recalculation of 5 cores + 10-20 orbit card positions.
     property real globalOrbitAngle: 0
-    Timer {
-        interval: 100
-        running: true
-        repeat: true
-        onTriggered: {
-            window.globalOrbitAngle += (Math.PI * 2) * (0.1 / 200.0);
-            if (window.globalOrbitAngle > Math.PI * 2) window.globalOrbitAngle -= Math.PI * 2;
-        }
+    NumberAnimation on globalOrbitAngle {
+        from: 0; to: Math.PI * 2; duration: 200000; loops: Animation.Infinite; running: true
     }
 
     property real introState: 0.0
     Behavior on introState { NumberAnimation { duration: 1500; easing.type: Easing.OutCubic } }
 
     component LoadingDots : Row {
-        id: dotsRow
         spacing: window.s(5)
         property color dotCol: window.text
         Repeater {
@@ -846,7 +819,6 @@ Item {
             Rectangle {
                 width: window.s(6); height: window.s(6); radius: window.s(3); color: dotCol
                 SequentialAnimation on y {
-                    running: dotsRow.visible && dotsRow.opacity > 0.01
                     loops: Animation.Infinite
                     PauseAnimation { duration: index * 100 }
                     NumberAnimation { from: 0; to: window.s(-6); duration: 250; easing.type: Easing.OutSine }
@@ -868,12 +840,10 @@ Item {
             border.width: 1
             clip: true
             
-            // PERF: Made background blobs static - they're barely visible (0.06-0.08 opacity)
-            // and were causing per-frame recalculation for no visual benefit.
             Rectangle {
                 width: parent.width * 0.8; height: width; radius: width / 2
-                x: (parent.width / 2 - width / 2) + window.s(80)
-                y: (parent.height / 2 - height / 2) - window.s(50)
+                x: (parent.width / 2 - width / 2) + Math.cos(window.globalOrbitAngle * 2) * window.s(150)
+                y: (parent.height / 2 - height / 2) + Math.sin(window.globalOrbitAngle * 2) * window.s(100)
                 opacity: window.currentPower ? 0.08 : 0.02
                 color: window.currentConn ? window.activeColor : window.surface2
                 Behavior on color { ColorAnimation { duration: 1000 } }
@@ -883,8 +853,8 @@ Item {
             
             Rectangle {
                 width: parent.width * 0.9; height: width; radius: width / 2
-                x: (parent.width / 2 - width / 2) - window.s(80)
-                y: (parent.height / 2 - height / 2) + window.s(50)
+                x: (parent.width / 2 - width / 2) + Math.sin(window.globalOrbitAngle * 1.5) * window.s(-150)
+                y: (parent.height / 2 - height / 2) + Math.cos(window.globalOrbitAngle * 1.5) * window.s(-100)
                 opacity: window.currentPower ? 0.06 : 0.01
                 color: window.currentConn ? window.activeGradientSecondary : window.surface1
                 Behavior on color { ColorAnimation { duration: 1000 } }
@@ -937,15 +907,18 @@ Item {
 
                 Timer {
                     id: lightningTimer
-                    interval: 500
+                    interval: 45
                     running: nodeLinesCanvas.opacity > 0.01 && window.currentPower 
                     repeat: true
                     onTriggered: nodeLinesCanvas.requestPaint()
                 }
 
-                // PERF: Removed onGlobalOrbitAngleChanged → requestPaint() connection.
-                // That was causing Canvas repaint every frame (~16ms) since globalOrbitAngle
-                // changes continuously. The lightningTimer at 500ms is sufficient.
+                Connections {
+                    target: window
+                    function onGlobalOrbitAngleChanged() { 
+                        if (window.currentConn && window.showInfoView && window.currentPower) nodeLinesCanvas.requestPaint() 
+                    }
+                }
                 
                 onPaint: {
                     var ctx = getContext("2d");
@@ -1005,7 +978,7 @@ Item {
                                 var t = j / steps;
                                 var currentDist = drawDist * t;
                                 var envelope = Math.sin(t * Math.PI);
-                                var offset = Math.sin(tWave1 + t * 6) * s(6) * envelope + (Math.sin(time * 13.7 + t * 7.3) * s(2.5) * distanceFactor);
+                                var offset = Math.sin(tWave1 + t * 6) * s(6) * envelope + ((Math.random() - 0.5) * s(5.0) * distanceFactor);
                                 ctx.lineTo(sX + cosA * currentDist + perpX * offset, sY + sinA * currentDist + perpY * offset);
                             }
                             ctx.lineWidth = dynamicLineWidthGlow;
@@ -1024,7 +997,7 @@ Item {
                                 var tk = k / steps;
                                 var currentDistK = drawDist * tk;
                                 var envelopeK = Math.sin(tk * Math.PI);
-                                var offsetK = Math.cos(tWave2 + tk * 8) * s(12) * envelopeK + (Math.cos(time * 17.3 + tk * 11.7) * s(1.5) * distanceFactor);
+                                var offsetK = Math.cos(tWave2 + tk * 8) * s(12) * envelopeK + ((Math.random() - 0.5) * s(3.0) * distanceFactor);
                                 ctx.lineTo(sX + cosA * currentDistK + perpX * offsetK, sY + sinA * currentDistK + perpY * offsetK);
                             }
                             ctx.lineWidth = dynamicLineWidthCore * 1.5;
@@ -1105,15 +1078,16 @@ Item {
                         property bool showPassword: isPrimary && window.pendingWifiId !== "" && window.activeMode === "wifi"
                         property bool showEthDisconnected: isPrimary && window.currentPower && !window.currentConn && window.activeMode === "eth"
 
-                        // PERF: Replaced expensive MultiEffect shadow with simple Rectangle shadow
-                        Rectangle {
-                            anchors.centerIn: centralCore
-                            anchors.verticalCenterOffset: window.s(4)
-                            width: centralCore.width; height: centralCore.height; radius: centralCore.radius
-                            color: "#000000"
-                            opacity: window.currentPower ? 0.25 : 0.0
+                        MultiEffect {
+                            source: centralCore
+                            anchors.fill: centralCore
+                            shadowEnabled: true
+                            shadowColor: "#000000"
+                            shadowOpacity: window.currentPower ? 0.5 : 0.0
+                            shadowBlur: 1.2
+                            shadowVerticalOffset: window.s(6)
                             z: -1
-                            Behavior on opacity { NumberAnimation { duration: 600 } }
+                            Behavior on shadowOpacity { NumberAnimation { duration: 600 } }
                         }
 
                         Rectangle {
@@ -1251,7 +1225,6 @@ Item {
                             }
                             
                             Rectangle {
-                                id: pulseRing
                                 anchors.centerIn: parent
                                 width: parent.width + window.s(15)
                                 height: width
@@ -1261,20 +1234,20 @@ Item {
                                 border.width: window.s(3)
                                 z: -2
                                 
-                                property bool pulseActive: ((window.currentConn || showPassword) && window.showInfoView && window.currentPower && !isMyDisconnecting)
-
-                                // PERF: Replaced JS Timer (120ms) with GPU-accelerated SequentialAnimations
-                                SequentialAnimation on opacity {
-                                    running: pulseRing.pulseActive
-                                    loops: Animation.Infinite
-                                    NumberAnimation { to: 0.45; duration: 1200; easing.type: Easing.InOutSine }
-                                    NumberAnimation { to: 0.15; duration: 1200; easing.type: Easing.InOutSine }
-                                }
-                                SequentialAnimation on scale {
-                                    running: pulseRing.pulseActive
-                                    loops: Animation.Infinite
-                                    NumberAnimation { to: 1.04; duration: 1500; easing.type: Easing.InOutSine }
-                                    NumberAnimation { to: 1.0; duration: 1500; easing.type: Easing.InOutSine }
+                                property real pulseOp: 0.0
+                                property real pulseSc: 1.0
+                                opacity: ((window.currentConn || showPassword) && window.showInfoView && window.currentPower && !isMyDisconnecting) ? pulseOp : 0.0
+                                scale: pulseSc
+                                
+                                Timer {
+                                    interval: 45
+                                    running: parent.opacity > 0.01
+                                    repeat: true
+                                    onTriggered: {
+                                        var time = Date.now() / 1000;
+                                        parent.pulseOp = 0.3 + Math.sin(time * 2.5) * 0.15;
+                                        parent.pulseSc = 1.02 + Math.cos(time * 3.0) * 0.02;
+                                    }
                                 }
                             }
 
@@ -1510,9 +1483,9 @@ Item {
                                     busyTimeout.restart();
                                     
                                     let cmd = "";
-                                    if (window.activeMode === "eth") cmd = window.scriptsDir + "/network_backend --eth-disconnect '" + coreContainer.myId + "'";
-                                    else if (window.activeMode === "wifi") cmd = window.scriptsDir + "/network_backend --wifi-disconnect";
-                                    else cmd = window.scriptsDir + "/network_backend --bt-disconnect '" + coreContainer.myId + "'";
+                                    if (window.activeMode === "eth") cmd = "nmcli device disconnect '" + coreContainer.myId + "'";
+                                    else if (window.activeMode === "wifi") cmd = "nmcli device disconnect $(nmcli -t -f DEVICE,TYPE d | grep wifi | cut -d: -f1 | head -n1)";
+                                    else cmd = "bash " + window.scriptsDir + "/bluetooth_panel_logic.sh --disconnect '" + coreContainer.myId + "'";
                                     Quickshell.execDetached(["sh", "-c", cmd])
                                     
                                     centralCore.disconnectFill = 0.0;
@@ -1645,22 +1618,25 @@ Item {
                                 ? (orbitContainer.height / 2) - (height / 2) + Math.sin(currentAngle) * animRadY
                                 : parentY - (height / 2) + Math.sin(currentAngle) * animRadY
 
-                            // PERF: Removed liveBob - was causing Math.sin per frame per info card
+                            property real liveBob: myParentIdx === -1 && isInfoNode 
+                                ? Math.sin(window.globalOrbitAngle * 6) * window.s(12) * (1 - unifiedRatio) 
+                                : 0
 
                             x: targetX
-                            y: targetY
+                            y: targetY + liveBob
 
                             scale: (!isLoaded ? 0.0 : (floatMa.pressed ? dynamicScale * 0.95 : (floatCard.locksList ? dynamicScale * 1.08 : dynamicScale))) * floatCard.bumpScale
                             Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutQuart } }
                             z: floatCard.locksList ? 10 : index
 
-                            // PERF: Replaced expensive MultiEffect shadow with simple Rectangle
-                            Rectangle {
-                                anchors.centerIn: floatCard
-                                anchors.verticalCenterOffset: window.s(3)
-                                width: floatCard.width; height: floatCard.height; radius: window.s(14)
-                                color: "#000000"
-                                opacity: (window.currentPower && floatCardDelegateContainer.opacity > 0.05) ? 0.15 : 0.0
+                            MultiEffect {
+                                source: floatCard
+                                anchors.fill: floatCard
+                                shadowEnabled: window.currentPower && floatCardDelegateContainer.opacity > 0.05
+                                shadowColor: "#000000"
+                                shadowOpacity: 0.3
+                                shadowBlur: 0.8
+                                shadowVerticalOffset: window.s(4)
                                 z: -1
                             }
 
@@ -1759,25 +1735,25 @@ Item {
                                     color: "transparent"
                                     border.width: 1
                                     border.color: floatCard.isFailed ? window.red : window.surface2
-                                    visible: !floatCard.isHighlighted && !floatCard.locksList
+                                    visible: !isHighlighted && !locksList
                                     Behavior on border.color { ColorAnimation { duration: 300 } }
                                 }
 
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: window.s(14)
-                                    opacity: floatCard.locksList || floatCard.isHighlighted ? 1.0 : 0.0
+                                    opacity: locksList || isHighlighted ? 1.0 : 0.0
                                     color: "transparent"
-                                    border.width: floatCard.isHighlighted && !floatCard.locksList ? 1 : window.s(2)
+                                    border.width: isHighlighted && !locksList ? 1 : window.s(2)
                                     border.color: floatCard.isFailed ? window.red : "transparent"
                                     Behavior on opacity { NumberAnimation { duration: 250 } }
                                     
                                     Rectangle {
                                         anchors.fill: parent
-                                        anchors.margins: floatCard.isHighlighted && !floatCard.locksList ? 1 : window.s(2)
+                                        anchors.margins: isHighlighted && !locksList ? 1 : window.s(2)
                                         radius: window.s(12)
                                         color: window.base
-                                        opacity: floatCard.locksList ? 0.9 : 1.0
+                                        opacity: locksList ? 0.9 : 1.0
                                     }
                                     
                                     gradient: Gradient {
@@ -1869,21 +1845,20 @@ Item {
                                 }
 
                                 Rectangle {
-                                    id: highlightBorder
                                     anchors.fill: parent
                                     radius: parent.radius
                                     color: "transparent"
                                     border.color: window.activeColor
                                     border.width: window.s(2)
-                                    visible: floatCard.isHighlighted && !floatCard.isMyBusy && !floatCard.isCurrentlyConnected && !floatCard.isFailed
+                                    visible: parent.isHighlighted && !parent.isMyBusy && !parent.isCurrentlyConnected && !parent.isFailed
                                     
                                     SequentialAnimation on scale {
-                                        loops: Animation.Infinite; running: highlightBorder.visible
+                                        loops: Animation.Infinite; running: parent.visible
                                         NumberAnimation { to: 1.15; duration: 1200; easing.type: Easing.InOutSine }
                                         NumberAnimation { to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
                                     }
                                     SequentialAnimation on opacity {
-                                        loops: Animation.Infinite; running: highlightBorder.visible
+                                        loops: Animation.Infinite; running: parent.visible
                                         NumberAnimation { to: 0.0; duration: 1200; easing.type: Easing.InOutSine }
                                         NumberAnimation { to: 0.8; duration: 1200; easing.type: Easing.InOutSine }
                                     }
@@ -2174,7 +2149,7 @@ Item {
                                 if (window.activeMode !== "eth") {
                                     window.powerAnimAllowed = false;
                                     powerAnimBlocker.restart();
-                                    // window.playSfx("switch.wav"); // Disabled tab switch sound
+                                    window.playSfx("switch.wav");
                                     window.activeMode = "eth";
                                 }
                             }
@@ -2206,7 +2181,7 @@ Item {
                                 if (window.activeMode !== "wifi") {
                                     window.powerAnimAllowed = false;
                                     powerAnimBlocker.restart();
-                                    // window.playSfx("switch.wav"); // Disabled tab switch sound
+                                    window.playSfx("switch.wav");
                                     window.activeMode = "wifi";
                                 }
                             }
@@ -2237,7 +2212,6 @@ Item {
                                 if (window.activeMode !== "bt") {
                                     window.powerAnimAllowed = false;
                                     powerAnimBlocker.restart();
-                                    // window.playSfx("switch.wav"); // Disabled tab switch sound
                                     window.activeMode = "bt";
                                 }
                             }
@@ -2364,7 +2338,7 @@ Item {
                                 if (window.expectedWifiPower === "on") window.playSfx("power_on.wav"); else window.playSfx("power_off.wav");
                                 wifiPendingReset.restart();
                                 window.wifiPower = window.expectedWifiPower;
-                                Quickshell.execDetached([window.scriptsDir + "/network_backend", "--wifi-toggle"]);
+                                Quickshell.execDetached(["nmcli", "radio", "wifi", window.wifiPower]);
                                 wifiPoller.running = true;
                             } else {
                                 if (window.btPowerPending) return;
@@ -2373,7 +2347,7 @@ Item {
                                 if (window.expectedBtPower === "on") window.playSfx("power_on.wav"); else window.playSfx("power_off.wav");
                                 btPendingReset.restart();
                                 window.btPower = window.expectedBtPower;
-                                Quickshell.execDetached([window.scriptsDir + "/network_backend", "--bt-toggle"]);
+                                Quickshell.execDetached(["bash", window.scriptsDir + "/bluetooth_panel_logic.sh", "--toggle"]);
                                 btPoller.running = true;
                             }
                         }
