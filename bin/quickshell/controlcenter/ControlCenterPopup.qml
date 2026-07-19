@@ -1033,7 +1033,14 @@ Item {
 
     Timer {
         id: saveTimer
-        interval: 1000
+        interval: 150
         onTriggered: Config.applyControlCenterSettings()
+    }
+
+    Component.onDestruction: {
+        if (saveTimer.running) {
+            saveTimer.stop();
+            Config.applyControlCenterSettings();
+        }
     }
 }

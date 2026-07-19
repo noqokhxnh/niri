@@ -4,20 +4,7 @@ get_real_sink() {
     if command -v pactl &>/dev/null; then
         default_sink=$(pactl get-default-sink 2>/dev/null)
     fi
-    
-    if [[ "$default_sink" == "easyeffects_sink" ]]; then
-        local physical_sink=""
-        if command -v pw-link &>/dev/null; then
-            physical_sink=$(pw-link -l 2>/dev/null | grep -E "^ee_" -A 1 | grep -E "alsa_output\." | head -n 1 | awk -F'->' '{print $2}' | awk -F':' '{print $1}' | xargs)
-        fi
-        
-        if [[ -z "$physical_sink" ]]; then
-            physical_sink=$(pactl list sinks short 2>/dev/null | awk '{print $2}' | grep -v "easyeffects_sink" | head -n 1)
-        fi
-        echo "$physical_sink"
-    else
-        echo "${default_sink:-@DEFAULT_AUDIO_SINK@}"
-    fi
+    echo "${default_sink:-@DEFAULT_AUDIO_SINK@}"
 }
 
 get_volume() {

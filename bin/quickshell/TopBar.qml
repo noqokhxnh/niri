@@ -410,7 +410,7 @@ Variants {
             Process {
                 id: wsWatcher
                 running: true
-                command: ["bash", "-c", "f='" + paths.getRunDir("workspaces") + "/workspaces.json'; while [ ! -f \"$f\" ]; do sleep 1; done; exec inotifywait -qq -e close_write,modify \"$f\" 2>/dev/null || sleep 1"]
+                command: ["bash", "-c", "f='" + paths.getRunDir("workspaces") + "/workspaces.json'; while [ ! -f \"$f\" ]; do sleep 1; done; exec inotifywait -qq -e close_write,modify,delete_self,move_self \"$f\" 2>/dev/null || sleep 1"]
                 onExited: exitCode => {
                     if (exitCode === 0) {
                         wsReader.running = false;

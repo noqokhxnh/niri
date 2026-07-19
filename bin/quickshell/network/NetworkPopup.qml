@@ -122,7 +122,19 @@ Item {
         }
     }
 
-    Timer { interval: 100; running: true; repeat: true; onTriggered: modeReader.running = true }
+    Process {
+        id: modeWatcher
+        running: true
+        command: ["bash", "-c", "f='" + window.modeFilePath + "'; mkdir -p $(dirname \"$f\") && touch \"$f\" && exec inotifywait -qq -e close_write,modify \"$f\" 2>/dev/null || sleep 2"]
+        onExited: exitCode => {
+            if (exitCode === 0) {
+                modeReader.running = false;
+                modeReader.running = true;
+                running = false;
+                running = true;
+            }
+        }
+    }
 
     Component.onCompleted: {
         window.powerAnimAllowed = false;
@@ -818,6 +830,7 @@ Item {
     Behavior on introState { NumberAnimation { duration: 1500; easing.type: Easing.OutCubic } }
 
     component LoadingDots : Row {
+        id: dotsRow
         spacing: window.s(5)
         property color dotCol: window.text
         Repeater {
@@ -825,6 +838,7 @@ Item {
             Rectangle {
                 width: window.s(6); height: window.s(6); radius: window.s(3); color: dotCol
                 SequentialAnimation on y {
+                    running: dotsRow.visible && dotsRow.opacity > 0.01
                     loops: Animation.Infinite
                     PauseAnimation { duration: index * 100 }
                     NumberAnimation { from: 0; to: window.s(-6); duration: 250; easing.type: Easing.OutSine }
@@ -913,7 +927,7 @@ Item {
 
                 Timer {
                     id: lightningTimer
-                    interval: 45
+                    interval: 150
                     running: nodeLinesCanvas.opacity > 0.01 && window.currentPower 
                     repeat: true
                     onTriggered: nodeLinesCanvas.requestPaint()
@@ -984,7 +998,7 @@ Item {
                                 var t = j / steps;
                                 var currentDist = drawDist * t;
                                 var envelope = Math.sin(t * Math.PI);
-                                var offset = Math.sin(tWave1 + t * 6) * s(6) * envelope + ((Math.random() - 0.5) * s(5.0) * distanceFactor);
+                                var offset = Math.sin(tWave1 + t * 6) * s(6) * envelope + (Math.sin(time * 13.7 + t * 7.3) * s(2.5) * distanceFactor);
                                 ctx.lineTo(sX + cosA * currentDist + perpX * offset, sY + sinA * currentDist + perpY * offset);
                             }
                             ctx.lineWidth = dynamicLineWidthGlow;
@@ -1003,7 +1017,7 @@ Item {
                                 var tk = k / steps;
                                 var currentDistK = drawDist * tk;
                                 var envelopeK = Math.sin(tk * Math.PI);
-                                var offsetK = Math.cos(tWave2 + tk * 8) * s(12) * envelopeK + ((Math.random() - 0.5) * s(3.0) * distanceFactor);
+                                var offsetK = Math.cos(tWave2 + tk * 8) * s(12) * envelopeK + (Math.cos(time * 17.3 + tk * 11.7) * s(1.5) * distanceFactor);
                                 ctx.lineTo(sX + cosA * currentDistK + perpX * offsetK, sY + sinA * currentDistK + perpY * offsetK);
                             }
                             ctx.lineWidth = dynamicLineWidthCore * 1.5;
@@ -1246,7 +1260,7 @@ Item {
                                 scale: pulseSc
                                 
                                 Timer {
-                                    interval: 45
+                                    interval: 120
                                     running: parent.opacity > 0.01
                                     repeat: true
                                     onTriggered: {

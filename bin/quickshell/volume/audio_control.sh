@@ -10,20 +10,7 @@ get_real_sink() {
     if command -v pactl &>/dev/null; then
         default_sink=$(pactl get-default-sink 2>/dev/null)
     fi
-    
-    if [[ "$default_sink" == "easyeffects_sink" ]]; then
-        local physical_sink=""
-        if command -v pw-link &>/dev/null; then
-            physical_sink=$(pw-link -l 2>/dev/null | grep -E "^ee_soe_output_level:output_FL" -A 1 | tail -n 1 | awk -F':' '{print $1}' | tr -d ' |-><')
-        fi
-        
-        if [[ -z "$physical_sink" ]]; then
-            physical_sink=$(pactl list sinks short 2>/dev/null | awk '{print $2}' | grep -v "easyeffects_sink" | head -n 1)
-        fi
-        echo "$physical_sink"
-    else
-        echo "@DEFAULT_AUDIO_SINK@"
-    fi
+    echo "${default_sink:-@DEFAULT_AUDIO_SINK@}"
 }
 
 get_real_source() {
@@ -31,16 +18,7 @@ get_real_source() {
     if command -v pactl &>/dev/null; then
         default_source=$(pactl get-default-source 2>/dev/null)
     fi
-    
-    if [[ "$default_source" == "easyeffects_source" ]]; then
-        local physical_source=""
-        if command -v pactl &>/dev/null; then
-            physical_source=$(pactl list sources short 2>/dev/null | awk '{print $2}' | grep -v -E "easyeffects|monitor" | head -n 1)
-        fi
-        echo "${physical_source:-@DEFAULT_AUDIO_SOURCE@}"
-    else
-        echo "@DEFAULT_AUDIO_SOURCE@"
-    fi
+    echo "${default_source:-@DEFAULT_AUDIO_SOURCE@}"
 }
 
 case $ACTION in

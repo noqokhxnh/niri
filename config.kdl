@@ -208,8 +208,9 @@ spawn-at-startup "/home/khxnh/.config/niri/bin/update_notifier.sh"
 spawn-at-startup "/home/khxnh/.config/niri/bin/battery_power_saver.sh"
 spawn-at-startup "fcitx5" "-d"
 
+
 output "eDP-1" {
-    mode "1920x1080@360"
+    mode "1920x1080@60"
     position x=0 y=0
     scale 1.00
 }

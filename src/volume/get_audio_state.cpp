@@ -122,18 +122,14 @@ int main() {
         sink_inputs = json::parse(exec_command("pactl -f json list sink-inputs"));
     } catch (...) { sink_inputs = json::array(); }
     
-    // Get default nodes
-    std::string default_sink = get_wpctl_default("@DEFAULT_AUDIO_SINK@");
-    std::string default_source = get_wpctl_default("@DEFAULT_AUDIO_SOURCE@");
-
-    // Fallback for default nodes if wpctl fails
-    if (default_sink.empty() || default_source.empty()) {
-        try {
-            json info = json::parse(exec_command("pactl -f json info"));
-            if (default_sink.empty()) default_sink = info.value("default_sink_name", "");
-            if (default_source.empty()) default_source = info.value("default_source_name", "");
-        } catch (...) {}
-    }
+    // Get default nodes from pactl info
+    std::string default_sink = "";
+    std::string default_source = "";
+    try {
+        json info = json::parse(exec_command("pactl -f json info"));
+        default_sink = info.value("default_sink_name", "");
+        default_source = info.value("default_source_name", "");
+    } catch (...) {}
 
     // Process Sinks (Outputs)
     json out_sinks = json::array();
