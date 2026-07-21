@@ -15,6 +15,13 @@ if command -v gdbus &>/dev/null; then
         ActiveProfile "<'power-saver'>" 2>/dev/null || true
 fi
 # ──────────────────────────────────────────────────────────────
+# ALSA — Headphone volume fix (tránh headphone bị mute sau reboot)
+# ──────────────────────────────────────────────────────────────
+if command -v amixer &>/dev/null; then
+    # Card 1 = Realtek ALC897 (Ryzen HD Audio Controller)
+    amixer -c 1 set Headphone 75% unmute 2>/dev/null || true
+fi
+# ──────────────────────────────────────────────────────────────
 
 source "$(dirname "${BASH_SOURCE[0]}")/caching.sh"
 qs_ensure_cache "wallpaper_picker"

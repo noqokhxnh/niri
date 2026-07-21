@@ -265,7 +265,8 @@ public:
                     } else {
                         bool downloaded = false;
                         if (rawArtUrl.startsWith("http")) {
-                            QNetworkRequest req((QUrl(rawArtUrl)));
+                            QNetworkRequest req{QUrl(rawArtUrl)};
+                            req.setRawHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0");
                             QNetworkReply *rep = manager->get(req);
                             QEventLoop loop;
                             QObject::connect(rep, &QNetworkReply::finished, &loop, &QEventLoop::quit);
@@ -275,6 +276,20 @@ public:
                                 if (f.open(QIODevice::WriteOnly)) { f.write(rep->readAll()); downloaded = true; }
                             }
                             rep->deleteLater();
+                        } else if (rawArtUrl.startsWith("data:")) {
+                            // Handle data: URIs (base64 embedded image data)
+                            // Format: data:[<mediatype>][;base64],<data>
+                            int commaPos = rawArtUrl.indexOf(',');
+                            if (commaPos >= 0) {
+                                QString dataPart = rawArtUrl.mid(commaPos + 1);
+                                QString metaPart = rawArtUrl.mid(5, commaPos - 5); // after "data:"
+                                bool isBase64 = metaPart.contains("base64");
+                                QByteArray imgData = isBase64 ? QByteArray::fromBase64(dataPart.toUtf8()) : QByteArray::fromPercentEncoding(dataPart.toUtf8());
+                                if (!imgData.isEmpty()) {
+                                    QFile f(cachedArt);
+                                    if (f.open(QIODevice::WriteOnly)) { f.write(imgData); downloaded = true; }
+                                }
+                            }
                         } else {
                             QString path = rawArtUrl;
                             if (path.startsWith("file://")) path = path.mid(7);
@@ -380,8 +395,17 @@ public:
             bands["band" + QString::number(i)] = band;
         }
 
+        // Check if all bands are flat (0 gain) — bypass EQ entirely for transparent audio
+        bool allFlat = true;
+        for (int i = 1; i <= 10; ++i) {
+            if (data["b" + QString::number(i)].toString().toDouble() != 0.0) {
+                allFlat = false;
+                break;
+            }
+        }
+
         QJsonObject equalizer;
-        equalizer["bypass"] = false;
+        equalizer["bypass"] = allFlat; // true = no processing → clean phase-neutral audio
         equalizer["input-gain"] = 0.0;
         equalizer["output-gain"] = 0.0;
         equalizer["left"] = bands;
