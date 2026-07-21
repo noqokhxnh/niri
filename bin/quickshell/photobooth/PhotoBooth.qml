@@ -46,9 +46,7 @@ Item {
     property bool   isMinimized:    false
 
     property int  burstCount: 0
-    property int  burstProgress: 0
     property var  burstFiles: []
-    property bool _burstInProgress: false
 
 
 
@@ -231,9 +229,12 @@ Item {
         }
         imageCapture: ImageCapture {
             id: imageCapture
-            onFileSaved: { if (!window._burstInProgress) addCaptureToRoll(path) }
+            // Manual refresh handled in singleShot/stitchBurst
         }
-        recorder: MediaRecorder { id: recorder }
+        recorder: MediaRecorder {
+            id: recorder
+            outputLocation: Quickshell.env("HOME") + "/Pictures/PhotoBooth/video_" + Date.now() + ".mp4"
+        }
         videoOutput: cameraOutput
     }
 
