@@ -21,7 +21,7 @@ Item {
     readonly property string photoDir: Quickshell.env("HOME") + "/Pictures/PhotoBooth"
 
     MatugenColors { id: _theme }
-    
+
     readonly property color bg:       _theme.base
     readonly property color fg:       _theme.text
     readonly property color surf0:    _theme.surface0
@@ -49,8 +49,6 @@ Item {
     property int  burstProgress: 0
     property var  burstFiles: []
 
-
-
     // Intro animation
     property real introPhase: 1
     NumberAnimation on introPhase {
@@ -65,7 +63,7 @@ Item {
         introAnim.restart()
 
         Quickshell.execDetached(["bash", "-c", "mkdir -p '" + window.photoDir + "'"])
-        
+
         if (!window.isSessionActive) {
             console.log("Starting new Photo Booth session")
             Components.QsDaemonClient.sendRequest("photobooth", "setup", {}, null)
@@ -95,7 +93,6 @@ Item {
         target: masterWindow
         function onCurrentActiveChanged() {
             if (masterWindow.currentActive !== "photobooth") {
-                // If it's not minimized, then close session
                 if (!window.isMinimized) {
                     console.log("Closing Photo Booth session")
                     window.isSessionActive = false
@@ -106,7 +103,6 @@ Item {
 
     function addCaptureToRoll(path) {
         let filename = path.substring(path.lastIndexOf('/') + 1)
-        // Insert at the beginning so latest is on the left
         clipRollModel.insert(0, { name: filename, path: "file://" + path })
         Components.QsDaemonClient.sendRequest("photobooth", "add_to_session", { path: path }, null)
     }
@@ -150,7 +146,7 @@ Item {
         interval: 900
         repeat: true
         onTriggered: {
-            window.burstProgress = window.burstCount + 1  // 1-indexed for display
+            window.burstProgress = window.burstCount + 1
             window.flashActive = true
             flashTimer.restart()
             let fname = "burst_" + window.burstCount + "_" + Date.now() + ".jpg"
@@ -209,12 +205,10 @@ Item {
     function stitchBurst() {
         let fname = "burst_" + Date.now() + ".jpg"
         let out = window.photoDir + "/" + fname
-        
-        // Snapshot the array to avoid concurrent burst mutation
+
         let inFiles = window.burstFiles.slice()
-        
+
         Components.QsDaemonClient.sendRequest("photobooth", "burst", { inputs: inFiles, output: out }, function(res) {
-            // Optimistically add to UI, backend will also persist it
             clipRollModel.insert(0, { name: fname, path: "file://" + out })
             window.burstFiles = []
         })
@@ -227,7 +221,7 @@ Item {
     // --- Camera ---
     CaptureSession {
         id: captureSession
-        camera: Camera { 
+        camera: Camera {
             id: camera
             active: window.visible && window.isSessionActive
         }
@@ -239,14 +233,13 @@ Item {
     }
 
     // =========================================================
-    // --- UI ROOT: transparent padding so rounded corners show
+    // UI ROOT
     // =========================================================
     Item {
         id: uiRoot
         anchors.fill: parent
         anchors.margins: 8
 
-        // Animated scale for intro
         transform: Scale {
             origin.x: uiRoot.width / 2
             origin.y: uiRoot.height / 2
@@ -255,7 +248,7 @@ Item {
         }
         opacity: window.introPhase
 
-        // --- Drop shadow layer ---
+        // Outer drop shadow
         Rectangle {
             anchors.fill: parent
             anchors.margins: -1
@@ -266,7 +259,7 @@ Item {
             z: -1
         }
 
-        // --- Main window card ---
+        // Main card
         Rectangle {
             id: card
             anchors.fill: parent
@@ -274,218 +267,11 @@ Item {
             color: window.mantle
             clip: true
 
-            OrbitBackground {
-                color1: window.mauve
-                color2: window.mauve
-                opacity1: 0.06
-                opacity2: 0.04
-            }
-
-            // Drag to move and resize (covers whole card)
-            MouseArea {
-                anchors.fill: parent
-                property real lastGlobalX: 0
-                property real lastGlobalY: 0
-                property string resizeSideX: "right"
-                property string resizeSideY: "bottom"
-                acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-                onPressed: (mouse) => {
-                    let globalPos = mapToItem(null, mouse.x, mouse.y)
-                    lastGlobalX = globalPos.x
-                    lastGlobalY = globalPos.y
-                    
-                    resizeSideX = (mouse.x < width / 2) ? "left" : "right"
-                    resizeSideY = (mouse.y < height / 2) ? "top" : "bottom"
-                    
-                    masterWindow.disableMorph = true
-                }
-
-                onReleased: {
-                    masterWindow.disableMorph = false
-                }
-
-                onPositionChanged: (mouse) => {
-                    let globalPos = mapToItem(null, mouse.x, mouse.y)
-                    let dx = globalPos.x - lastGlobalX
-                    let dy = globalPos.y - lastGlobalY
-                    
-                    if (mouse.buttons & Qt.LeftButton) {
-                        masterWindow.animX += dx
-                        masterWindow.animY += dy
-                    } else if (mouse.buttons & Qt.RightButton) {
-                        // X Resize
-                        let targetW = masterWindow.animW
-                        if (resizeSideX === "left") {
-                            targetW = Math.max(600, masterWindow.animW - dx)
-                            masterWindow.animX += (masterWindow.animW - targetW)
-                        } else {
-                            targetW = Math.max(600, masterWindow.animW + dx)
-                        }
-                        masterWindow.animW = targetW
-
-                        // Y Resize
-                        let targetH = masterWindow.animH
-                        if (resizeSideY === "top") {
-                            targetH = Math.max(500, masterWindow.animH - dy)
-                            masterWindow.animY += (masterWindow.animH - targetH)
-                        } else {
-                            targetH = Math.max(500, masterWindow.animH + dy)
-                        }
-                        masterWindow.animH = targetH
-                    }
-                    
-                    lastGlobalX = globalPos.x
-                    lastGlobalY = globalPos.y
-                }
-
-                cursorShape: {
-                    if (pressedButtons & Qt.RightButton) {
-                        if (resizeSideX === "left") {
-                            return (resizeSideY === "top") ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor
-                        } else {
-                            return (resizeSideY === "top") ? Qt.SizeBDiagCursor : Qt.SizeFDiagCursor
-                        }
-                    }
-                    if (pressedButtons & Qt.LeftButton) return Qt.SizeAllCursor
-                    return Qt.ArrowCursor
-                }
-            }
-
-            // ---- Title Bar ----
-            Rectangle {
-                id: titleBar
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 46
-                color: window.crust
-                // Round top corners to match card
-                radius: 28
-                Rectangle { // Cover bottom radius of titleBar so it's only rounded at top
-                    anchors.bottom: parent.bottom
-                    width: parent.width; height: parent.radius
-                    color: window.crust
-                }
-
-                // Traffic lights
-                Row {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 18
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 8
-                    z: 10
-
-                    // Red — Close
-                    Rectangle {
-                        width: 13; height: 13; radius: 7
-                        color: window.macRed
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "×"
-                            font.pixelSize: 10
-                            font.weight: Font.Bold
-                            color: Qt.rgba(0,0,0,0.7)
-                            opacity: redMa.containsMouse ? 1 : 0
-                        }
-                        MouseArea {
-                            id: redMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: {
-                                window.isSessionActive = false
-                                window.isMinimized = false
-                                Quickshell.execDetached([
-                                    "bash",
-                                    Quickshell.env("HOME") + "/.config/niri/bin/qs_manager.sh",
-                                    "close"
-                                ])
-                            }
-                        }
-                    }
-
-                    // Yellow — Restore to initial size
-                    Rectangle {
-                        width: 13; height: 13; radius: 7
-                        color: window.macYellow
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "−"
-                            font.pixelSize: 10
-                            font.weight: Font.Bold
-                            color: Qt.rgba(0,0,0,0.7)
-                            opacity: yellowMa.containsMouse ? 1 : 0
-                        }
-                        MouseArea {
-                            id: yellowMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: {
-                                console.log("Minimizing Photo Booth")
-                                window.isMinimized = true
-                                masterWindow.isVisible = false
-                            }
-                        }
-                    }
-
-                    // Green — Fullscreen
-                    Rectangle {
-                        width: 13; height: 13; radius: 7
-                        color: window.macGreen
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "⤢"
-                            font.pixelSize: 8
-                            font.weight: Font.Bold
-                            color: Qt.rgba(0,0,0,0.7)
-                            opacity: greenMa.containsMouse ? 1 : 0
-                        }
-                        MouseArea {
-                            id: greenMa
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: {
-                                masterWindow.disableMorph = false
-                                let screen = Quickshell.screens[0]
-                                if (masterWindow.animW >= screen.width - 20) {
-                                    // Restore to default
-                                    masterWindow.animW = 860
-                                    masterWindow.animH = 760
-                                    masterWindow.animX = (screen.width - 860) / 2
-                                    masterWindow.animY = (screen.height - 760) / 2
-                                } else {
-                                    // Fullscreen
-                                    masterWindow.animX = 0
-                                    masterWindow.animY = 0
-                                    masterWindow.animW = screen.width
-                                    masterWindow.animH = screen.height
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Photo Booth"
-                    font.family: "Inter"
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
-                    color: window.mauve
-                    opacity: 0.85
-                }
-            }
-
-            // ---- Camera Preview ----
+            // Camera preview — fills the entire card
             Rectangle {
                 id: previewArea
-                anchors.top: titleBar.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: clipRoll.top
+                anchors.fill: parent
+                anchors.bottomMargin: filmStrip.height
                 color: "#000000"
                 clip: true
 
@@ -501,7 +287,9 @@ Item {
                     }
                 }
 
-                // Countdown overlay
+                // --- Overlays on top of camera preview ---
+
+                // Countdown
                 Text {
                     anchors.centerIn: parent
                     text: window.countdown
@@ -514,7 +302,7 @@ Item {
                     visible: window.isCountingDown && window.countdown > 0
                 }
 
-                // Burst progress overlay
+                // Burst progress
                 Text {
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: 80
@@ -528,7 +316,7 @@ Item {
                     visible: window.captureMode === "burst" && window.burstCount > 0 && window.burstCount < 4
                 }
 
-                // Flash overlay
+                // Flash
                 Rectangle {
                     anchors.fill: parent
                     color: "white"
@@ -561,212 +349,69 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
-            }
 
-            // ---- Clip Roll ----
-            Rectangle {
-                id: clipRoll
-                anchors.bottom: bottomBar.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 110
-                color: Qt.rgba(0, 0, 0, 0.45)
-
-                // Separator line
-                Rectangle {
-                    anchors.top: parent.top
-                    width: parent.width; height: 1
-                    color: Qt.rgba(1, 1, 1, 0.06)
-                }
-
-                // Empty state
+                // --- macOS-style capture button (bottom center, overlapping preview/filmstrip) ---
                 Item {
-                    anchors.fill: parent
-                    visible: clipRollModel.count === 0
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: -30
+                    width: 84; height: 84
+                    z: 10
 
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: 10
-                        opacity: 0.35
-
-                        Text {
-                            text: "󰄀"
-                            font.family: "Iosevka Nerd Font"
-                            font.pixelSize: 22
-                            color: window.mauve
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            text: "No photos yet"
-                            font.family: "Inter"
-                            font.pixelSize: 13
-                            color: window.mauve
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                }
-
-                ListView {
-                    anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
-                    anchors.topMargin: 12
-                    anchors.bottomMargin: 12
-                    orientation: ListView.Horizontal
-                    spacing: 8
-                    model: clipRollModel
-                    visible: clipRollModel.count > 0
-                    clip: true
-
-                    delegate: Item {
-                        width: 128
-                        height: clipListView_height
-
-                        property int clipListView_height: 86
-
-                        Rectangle {
-                            id: thumb
-                            anchors.fill: parent
-                            radius: 10
-                            color: window.surf0
-                            clip: true
-                            border.color: thumbMa.containsMouse ? window.mauve : "transparent"
-                            border.width: 2
-
-                            Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                            Image {
-                                anchors.fill: parent
-                                source: model.path
-                                fillMode: Image.PreserveAspectCrop
-                                opacity: thumbMa.containsMouse ? 0.75 : 1.0
-                                Behavior on opacity { NumberAnimation { duration: 150 } }
-                            }
-
-                            // Hover open hint
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: 34; height: 34; radius: 17
-                                color: Qt.rgba(0, 0, 0, 0.55)
-                                visible: thumbMa.containsMouse
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "󰁍"
-                                    font.family: "Iosevka Nerd Font"
-                                    font.pixelSize: 18
-                                    color: "white"
-                                }
-                            }
-
-                            MouseArea {
-                                id: thumbMa
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                onClicked: {
-                                    let p = model.path.replace("file://", "")
-                                    Quickshell.execDetached(["bash", "-c", "unset HL_INITIAL_WORKSPACE_TOKEN && exec xdg-open '" + p.replace(/'/g, "'\\''") + "'"])
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ---- Bottom Bar ----
-            Rectangle {
-                id: bottomBar
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 90
-                color: window.crust
-                // Round bottom corners to match card
-                radius: 28
-                Rectangle { // Cover top radius of bottomBar so it's only rounded at bottom
-                    anchors.top: parent.top
-                    width: parent.width; height: parent.radius
-                    color: window.crust
-                }
-
-                // Separator
-                Rectangle {
-                    anchors.top: parent.top
-                    width: parent.width; height: 1
-                    color: Qt.rgba(1, 1, 1, 0.06)
-                }
-
-                // Mode icons (left)
-                Row {
-                    anchors.left: parent.left
-                    anchors.leftMargin: 24
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 22
-
-                    Repeater {
-                        model: [
-                            { icon: "󰄀", key: "single",  tip: "Single" },
-                            { icon: "󰄄", key: "burst",   tip: "Burst 4×" },
-                            { icon: "󰕧", key: "video",   tip: "Video" }
-                        ]
-
-                        Item {
-                            width: 36; height: 36
-
-                            Rectangle {
-                                anchors.centerIn: parent
-                                width: 34; height: 34; radius: 10
-                                color: window.captureMode === modelData.key ? Qt.rgba(1,1,1,0.1) : "transparent"
-                                Behavior on color { ColorAnimation { duration: 150 } }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: modelData.icon
-                                    font.family: "Iosevka Nerd Font"
-                                    font.pixelSize: 22
-                                    color: window.captureMode === modelData.key ? window.mauve : window.surf2
-                                    Behavior on color { ColorAnimation { duration: 150 } }
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                onClicked: window.captureMode = modelData.key
-                            }
-                        }
-                    }
-                }
-
-                // Capture button (center)
-                Item {
-                    anchors.centerIn: parent
-                    width: 76; height: 76
-
-                    // Subtle outer ring
+                    // Outer ring (drop shadow)
                     Rectangle {
                         anchors.fill: parent
                         radius: width / 2
                         color: "transparent"
-                        border.color: Qt.rgba(1, 1, 1, 0.4)
-                        border.width: 2
+                        border.color: Qt.rgba(1, 1, 1, 0.35)
+                        border.width: 3
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: -2
+                            radius: width / 2
+                            color: "transparent"
+                            border.color: Qt.rgba(0, 0, 0, 0.25)
+                            border.width: 1
+                        }
                     }
 
-                    // Inner red button
+                    // Inner button
                     Rectangle {
                         anchors.centerIn: parent
-                        width: 62; height: 62
+                        width: 66; height: 66
                         radius: width / 2
-                        color: captureMa.pressed ? "#d32f2f" : "#ff3b30"
-                        
+
+                        // Gradient-like effect with layered rectangles
+                        color: "#ff3b30"
                         Rectangle {
                             anchors.fill: parent
                             radius: width / 2
-                            color: "white"
-                            opacity: captureMa.containsMouse ? 0.1 : 0
-                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                            color: "transparent"
+                            border.color: Qt.rgba(0, 0, 0, 0.15)
+                            border.width: 1
+                        }
+                        // Shine (top half highlight)
+                        Rectangle {
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: parent.height * 0.55
+                            radius: width / 2
+                            color: Qt.rgba(1, 1, 1, 0.18)
+                            clip: true
                         }
 
-                        // Square stop indicator for video recording
+                        // Inner highlight ring
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: 3
+                            radius: width / 2
+                            color: "transparent"
+                            border.color: Qt.rgba(1, 1, 1, 0.25)
+                            border.width: 1
+                        }
+
+                        // Icon or stop (for video recording)
                         Rectangle {
                             anchors.centerIn: parent
                             width: window.isRecording ? 22 : 0
@@ -782,9 +427,17 @@ Item {
                             visible: !window.isRecording
                             text: window.captureMode === "video" ? "󰕧" : (window.captureMode === "burst" ? "󰄄" : "󰄀")
                             font.family: "Iosevka Nerd Font"
-                            font.pixelSize: 24
+                            font.pixelSize: 22
                             color: "white"
                             opacity: 0.9
+                        }
+
+                        // Pressed state
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: width / 2
+                            color: "white"
+                            opacity: captureMa.pressed ? 0.25 : 0
                         }
                     }
 
@@ -795,51 +448,258 @@ Item {
                         onClicked: startCountdown()
                     }
                 }
+            }
 
-                // Right controls: mirror toggle + open folder
-                Row {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 24
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 16
+            // --- Floating traffic lights (top-left) ---
+            Row {
+                id: trafficLights
+                anchors.top: parent.top
+                anchors.topMargin: 14
+                anchors.left: parent.left
+                anchors.leftMargin: 14
+                spacing: 8
+                z: 10
 
-                    // Mirror
+                Rectangle {
+                    width: 13; height: 13; radius: 7
+                    color: window.macRed
+                    Text {
+                        anchors.centerIn: parent
+                        text: "×"
+                        font.pixelSize: 10
+                        font.weight: Font.Bold
+                        color: Qt.rgba(0,0,0,0.6)
+                        opacity: redMa.containsMouse ? 1 : 0
+                    }
+                    MouseArea {
+                        id: redMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            window.isSessionActive = false
+                            window.isMinimized = false
+                            Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/niri/bin/qs_manager.sh", "close"])
+                        }
+                    }
+                }
+                Rectangle {
+                    width: 13; height: 13; radius: 7
+                    color: window.macYellow
+                    Text {
+                        anchors.centerIn: parent
+                        text: "−"
+                        font.pixelSize: 10
+                        font.weight: Font.Bold
+                        color: Qt.rgba(0,0,0,0.6)
+                        opacity: yellowMa.containsMouse ? 1 : 0
+                    }
+                    MouseArea {
+                        id: yellowMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            window.isMinimized = true
+                            masterWindow.isVisible = false
+                        }
+                    }
+                }
+                Rectangle {
+                    width: 13; height: 13; radius: 7
+                    color: window.macGreen
+                    Text {
+                        anchors.centerIn: parent
+                        text: "⤢"
+                        font.pixelSize: 8
+                        font.weight: Font.Bold
+                        color: Qt.rgba(0,0,0,0.6)
+                        opacity: greenMa.containsMouse ? 1 : 0
+                    }
+                    MouseArea {
+                        id: greenMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onClicked: {
+                            masterWindow.disableMorph = false
+                            let screen = Quickshell.screens[0]
+                            if (masterWindow.animW >= screen.width - 20) {
+                                masterWindow.animW = 860
+                                masterWindow.animH = 760
+                                masterWindow.animX = (screen.width - 860) / 2
+                                masterWindow.animY = (screen.height - 760) / 2
+                            } else {
+                                masterWindow.animX = 0
+                                masterWindow.animY = 0
+                                masterWindow.animW = screen.width
+                                masterWindow.animH = screen.height
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- Floating mode selector (top-right) ---
+            Row {
+                anchors.top: parent.top
+                anchors.topMargin: 14
+                anchors.right: parent.right
+                anchors.rightMargin: 14
+                spacing: 4
+                z: 10
+
+                Repeater {
+                    model: [
+                        { icon: "󰄀", key: "single", tip: "Photo" },
+                        { icon: "󰄄", key: "burst",  tip: "Burst" },
+                        { icon: "󰕧", key: "video",  tip: "Video" }
+                    ]
+
                     Item {
-                        width: 36; height: 36
+                        width: 32; height: 26
                         Rectangle {
-                            anchors.centerIn: parent
-                            width: 34; height: 34; radius: 10
-                            color: window.isMirrored ? Qt.rgba(1,1,1,0.1) : "transparent"
+                            anchors.fill: parent
+                            radius: 6
+                            color: window.captureMode === modelData.key ? Qt.rgba(1,1,1,0.2) : Qt.rgba(0,0,0,0.25)
                             Behavior on color { ColorAnimation { duration: 150 } }
 
                             Text {
                                 anchors.centerIn: parent
-                                text: "󰝭" // Better flip icon
+                                text: modelData.icon
                                 font.family: "Iosevka Nerd Font"
-                                font.pixelSize: 22
-                                color: window.isMirrored ? window.mauve : window.surf2
+                                font.pixelSize: 15
+                                color: window.captureMode === modelData.key ? "white" : Qt.rgba(1,1,1,0.55)
                                 Behavior on color { ColorAnimation { duration: 150 } }
                             }
                         }
-                        MouseArea { anchors.fill: parent; onClicked: window.isMirrored = !window.isMirrored }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: window.captureMode = modelData.key
+                        }
                     }
+                }
+            }
+
+            // --- Film strip at bottom ---
+            Rectangle {
+                id: filmStrip
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 100
+                color: Qt.rgba(0, 0, 0, 0.55)
+                z: 5
+
+                // Empty state
+                Item {
+                    anchors.fill: parent
+                    visible: clipRollModel.count === 0
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 8
+                        opacity: 0.3
+                        Text {
+                            text: "󰄀"
+                            font.family: "Iosevka Nerd Font"
+                            font.pixelSize: 18
+                            color: "white"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            text: "No Photos Yet"
+                            font.family: "Inter"
+                            font.pixelSize: 12
+                            color: "white"
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                }
+
+                ListView {
+                    id: filmListView
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    anchors.topMargin: 10
+                    anchors.bottomMargin: 10
+                    orientation: ListView.Horizontal
+                    spacing: 8
+                    model: clipRollModel
+                    visible: clipRollModel.count > 0
+                    clip: true
+
+                    delegate: Item {
+                        width: 80
+                        height: filmListView.height - 20
+
+                        Rectangle {
+                            id: thumb
+                            anchors.fill: parent
+                            radius: 6
+                            color: "#222"
+                            clip: true
+
+                            // macOS-style white stroke on latest
+                            border.color: index === 0 ? "white" : "transparent"
+                            border.width: index === 0 ? 2 : 0
+
+                            Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                            Image {
+                                anchors.fill: parent
+                                source: model.path
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: Qt.rgba(0, 0, 0, 0.3)
+                                visible: thumbMa.containsMouse
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "󰁍"
+                                    font.family: "Iosevka Nerd Font"
+                                    font.pixelSize: 16
+                                    color: "white"
+                                    opacity: 0.8
+                                }
+                            }
+
+                            MouseArea {
+                                id: thumbMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: {
+                                    let p = model.path.replace("file://", "")
+                                    Quickshell.execDetached(["bash", "-c", "unset HL_INITIAL_WORKSPACE_TOKEN && exec xdg-open '" + p.replace(/'/g, "'\\''") + "'"])
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Bottom-right utility buttons (inside film strip)
+                Row {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+                    z: 6
+                    visible: clipRollModel.count > 0
 
                     // Open folder
                     Item {
-                        width: 36; height: 36
+                        width: 28; height: 28
                         Rectangle {
-                            anchors.centerIn: parent
-                            width: 34; height: 34; radius: 10
-                            color: folderMa.containsMouse ? Qt.rgba(1,1,1,0.1) : "transparent"
-                            Behavior on color { ColorAnimation { duration: 150 } }
-
+                            anchors.fill: parent
+                            radius: 6
+                            color: folderMa.containsMouse ? Qt.rgba(1,1,1,0.15) : Qt.rgba(0,0,0,0.3)
                             Text {
                                 anchors.centerIn: parent
                                 text: "󰉋"
                                 font.family: "Iosevka Nerd Font"
-                                font.pixelSize: 22
-                                color: folderMa.containsMouse ? window.mauve : window.surf2
-                                Behavior on color { ColorAnimation { duration: 150 } }
+                                font.pixelSize: 14
+                                color: folderMa.containsMouse ? "white" : Qt.rgba(1,1,1,0.6)
                             }
                         }
                         MouseArea {
@@ -849,6 +709,73 @@ Item {
                             onClicked: openFolder()
                         }
                     }
+                }
+            }
+
+            // --- Drag/resize overlay ---
+            MouseArea {
+                anchors.fill: parent
+                property real lastGlobalX: 0
+                property real lastGlobalY: 0
+                property string resizeSideX: "right"
+                property string resizeSideY: "bottom"
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+
+                onPressed: (mouse) => {
+                    let globalPos = mapToItem(null, mouse.x, mouse.y)
+                    lastGlobalX = globalPos.x
+                    lastGlobalY = globalPos.y
+                    resizeSideX = (mouse.x < width / 2) ? "left" : "right"
+                    resizeSideY = (mouse.y < height / 2) ? "top" : "bottom"
+                    masterWindow.disableMorph = true
+                }
+
+                onReleased: {
+                    masterWindow.disableMorph = false
+                }
+
+                onPositionChanged: (mouse) => {
+                    let globalPos = mapToItem(null, mouse.x, mouse.y)
+                    let dx = globalPos.x - lastGlobalX
+                    let dy = globalPos.y - lastGlobalY
+
+                    if (mouse.buttons & Qt.LeftButton) {
+                        masterWindow.animX += dx
+                        masterWindow.animY += dy
+                    } else if (mouse.buttons & Qt.RightButton) {
+                        let targetW = masterWindow.animW
+                        if (resizeSideX === "left") {
+                            targetW = Math.max(600, masterWindow.animW - dx)
+                            masterWindow.animX += (masterWindow.animW - targetW)
+                        } else {
+                            targetW = Math.max(600, masterWindow.animW + dx)
+                        }
+                        masterWindow.animW = targetW
+
+                        let targetH = masterWindow.animH
+                        if (resizeSideY === "top") {
+                            targetH = Math.max(500, masterWindow.animH - dy)
+                            masterWindow.animY += (masterWindow.animH - targetH)
+                        } else {
+                            targetH = Math.max(500, masterWindow.animH + dy)
+                        }
+                        masterWindow.animH = targetH
+                    }
+
+                    lastGlobalX = globalPos.x
+                    lastGlobalY = globalPos.y
+                }
+
+                cursorShape: {
+                    if (pressedButtons & Qt.RightButton) {
+                        if (resizeSideX === "left") {
+                            return (resizeSideY === "top") ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor
+                        } else {
+                            return (resizeSideY === "top") ? Qt.SizeBDiagCursor : Qt.SizeFDiagCursor
+                        }
+                    }
+                    if (pressedButtons & Qt.LeftButton) return Qt.SizeAllCursor
+                    return Qt.ArrowCursor
                 }
             }
         } // card
