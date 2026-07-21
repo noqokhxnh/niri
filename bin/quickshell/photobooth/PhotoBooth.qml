@@ -48,6 +48,7 @@ Item {
     property int  burstCount: 0
     property int  burstProgress: 0
     property var  burstFiles: []
+    property bool _burstInProgress: false
 
     // Intro animation
     property real introPhase: 1
@@ -169,7 +170,7 @@ Item {
                 recorder.stop()
                 let path = recorder.outputLocation.toString().replace("file://", "")
                 let fname = path.substring(path.lastIndexOf('/') + 1)
-                addCaptureToRoll(fname)
+                addCaptureToRoll(path)
             } else {
                 window.isRecording = true
                 let fname = "video_" + Date.now() + ".mp4"
@@ -190,6 +191,7 @@ Item {
         } else if (window.captureMode === "burst") {
             window.burstCount = 0
             window.burstFiles = []
+            window._burstInProgress = true
             burstTimer.restart()
         }
     }
@@ -199,7 +201,7 @@ Item {
         flashTimer.restart()
         let path = window.photoDir + "/photo_" + Date.now() + ".jpg"
         imageCapture.captureToFile(path)
-        addCaptureToRoll(path)
+        // addCaptureToRoll is called by imageCapture.onFileSaved when file is ready
     }
 
     function stitchBurst() {
@@ -207,6 +209,7 @@ Item {
         let out = window.photoDir + "/" + fname
 
         let inFiles = window.burstFiles.slice()
+        window._burstInProgress = false
 
         Components.QsDaemonClient.sendRequest("photobooth", "burst", { inputs: inFiles, output: out }, function(res) {
             clipRollModel.insert(0, { name: fname, path: "file://" + out })
@@ -227,6 +230,12 @@ Item {
         }
         imageCapture: ImageCapture {
             id: imageCapture
+            onFileSaved: (id, path) => {
+                // Only auto-add for single shot; burst handles UI via stitchBurst callback
+                if (!window._burstInProgress) {
+                    addCaptureToRoll(path)
+                }
+            }
         }
         recorder: MediaRecorder { id: recorder }
         videoOutput: cameraOutput
