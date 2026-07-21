@@ -426,6 +426,11 @@ Item {
                 }
             }
 
+            // If a target wallpaper is expected but not yet in the model
+            // (thumbnails still being generated), don't steal focus to index 0.
+            // syncLocalModel will re-check when new items arrive.
+            if (cleanTarget !== "" && foundIndex === -1) return;
+
             let finalIndex = foundIndex !== -1 ? foundIndex : 0;
             window.executeFocusRestore(finalIndex, false, true);
         }
@@ -792,7 +797,12 @@ Item {
         } else if (window.jumpToLastOnFilterChange && lastValidIndex !== -1) {
             indexToFocus = lastValidIndex;
         } else if (firstValidIndex !== -1) {
-            indexToFocus = firstValidIndex;
+            // During initial open — if target is expected but not yet in model
+            // (thumbnail still being generated), don't steal focus.
+            // syncLocalModel handles it when the thumbnail arrives.
+            if (!(cleanTarget !== "" && targetIndex === -1 && !window.initialFocusSet)) {
+                indexToFocus = firstValidIndex;
+            }
         }
 
         window.jumpToLastOnFilterChange = false;
@@ -920,7 +930,23 @@ Item {
 
         if (window.currentFilter !== "Search") window.updateVisibleCount();
 
-        // First-time focus snap
+        // Always check if the target wallpaper has arrived in the model
+        // (even if initialFocusSet was already claimed by applyFilters).
+        if (window.targetWallName !== "" && window.currentFilter !== "Search" && localProxyModel.count > 0) {
+            let cleanTarget = window.getCleanName(window.targetWallName);
+            for (let i = 0; i < localProxyModel.count; i++) {
+                let fname = localProxyModel.get(i).fileName || "";
+                if (window.getCleanName(fname) === cleanTarget) {
+                    // Only snap if we haven't already landed on the correct item
+                    if (!window.initialFocusSet || view.currentIndex !== i) {
+                        window.executeFocusRestore(i, false, true);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // First-time focus snap (only if no target is set or target not yet found)
         if (!window.initialFocusSet && window.currentFilter !== "Search" && localProxyModel.count > 0) {
             window.tryFocus();
         }

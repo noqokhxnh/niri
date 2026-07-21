@@ -220,10 +220,22 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
     if [[ "$TARGET" == "wallpaper" ]]; then
         handle_wallpaper_prep
         CURRENT_SRC=""
+
+        # Detect current wallpaper from running wallpaper engines
         if pgrep -a "mpvpaper" > /dev/null; then
             CURRENT_SRC=$(pgrep -a mpvpaper | grep -o "$SRC_DIR/[^' ]*" | head -n1)
-        elif command -v awww >/dev/null; then
-            CURRENT_SRC=$(awww query 2>/dev/null | grep -o "$SRC_DIR/[^ ]*" | head -n1)
+        fi
+
+        # Fallback: read awww state cache (stores image path per monitor)
+        if [ -z "$CURRENT_SRC" ] && [ -d "$HOME/.cache/awww" ]; then
+            AWWS_VER_DIR=$(ls -td "$HOME/.cache/awww"/*/ 2>/dev/null | head -1)
+            if [ -n "$AWWS_VER_DIR" ]; then
+                for f in "$AWWS_VER_DIR"*; do
+                    [ -f "$f" ] || continue
+                    PATH_IN_FILE=$(cat "$f" | tr '\0' '\n' | tail -1)
+                    case "$PATH_IN_FILE" in "$SRC_DIR"/*) CURRENT_SRC="$PATH_IN_FILE"; break ;; esac
+                done
+            fi
         fi
 
         TARGET_THUMB=""
@@ -231,6 +243,23 @@ if [[ "$ACTION" == "open" || "$ACTION" == "toggle" ]]; then
             BASE=$(basename "$CURRENT_SRC")
             EXT="${BASE##*.}"
             [[ "${EXT,,}" =~ ^(mp4|mkv|mov|webm)$ ]] && TARGET_THUMB="000_$BASE" || TARGET_THUMB="$BASE"
+
+            # Ensure the thumbnail exists SYNCHRONOUSLY before the picker opens
+            if [ ! -f "$THUMB_DIR/$TARGET_THUMB" ]; then
+                if [[ "${EXT,,}" =~ ^(mp4|mkv|mov|webm)$ ]]; then
+                    ffmpeg -y -ss 00:00:05 -i "$CURRENT_SRC" -vframes 1 -threads 1 -f image2 -q:v 2 "$THUMB_DIR/$TARGET_THUMB" >/dev/null 2>&1 || true
+                else
+                    magick "$CURRENT_SRC" -resize x420 -quality 70 "$THUMB_DIR/$TARGET_THUMB" >/dev/null 2>&1 || true
+                fi
+                # Also update the manifest so handle_wallpaper_prep doesn't redo it
+                if [ -f "$MANIFEST" ]; then
+                    if [[ "${EXT,,}" =~ ^(mp4|mkv|mov|webm)$ ]]; then
+                        echo "000_$BASE" >> "$MANIFEST"
+                    else
+                        echo "$BASE" >> "$MANIFEST"
+                    fi
+                fi
+            fi
         fi
 
         quickshell -p "$SHELL_QML_PATH" ipc call main handleCommand "$ACTION" "$TARGET" "$TARGET_THUMB" >/dev/null 2>&1
