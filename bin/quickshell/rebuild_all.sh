@@ -70,4 +70,10 @@ if [ -f "../../src/watchers/sys_fetcher.cpp" ]; then
     g++ -O3 -std=c++20 ../../src/watchers/sys_fetcher.cpp -o watchers/sys_fetcher >/dev/null
 fi
 
+# 11. Compile updater backend
+if [ -f "updater/compile_updater.sh" ]; then
+    echo "-> Compiling updater_backend..."
+    (cd updater && bash compile_updater.sh >/dev/null)
+fi
+
 echo "=== All Quickshell C++ components rebuilt successfully! ==="

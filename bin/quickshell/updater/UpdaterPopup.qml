@@ -21,6 +21,7 @@ Item {
     implicitHeight: mainCard.height || 600
 
     property bool _init: false
+    property string updaterBin: paths.getRunDir("updater") + "/updater_backend"
 
     // --- Responsive Scaling Logic ---
     Scaler {
@@ -123,7 +124,7 @@ Item {
     Process {
         id: remoteVerProcess
         running: false
-        command: ["bash", "-c", "curl -m 5 -s https://raw.githubusercontent.com/noqokhxnh/lucretia/main/install.sh | grep '^DOTS_VERSION=' | cut -d'\"' -f2"]
+        command: [window.updaterBin, "--version"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let out = this.text ? this.text.trim() : "";
@@ -133,47 +134,10 @@ Item {
     }
 
     // --- 3. DYNAMIC VIDEO RESOLUTION ---
-    property string videoResolveScript: `
-import urllib.request, json, subprocess, sys
-try:
-    local_str = subprocess.check_output("source ~/.local/state/lucretia-version 2>/dev/null && echo $LOCAL_VERSION", shell=True).decode('utf-8').strip()
-    if not local_str: local_str = '0.0.0'
-    
-    # Safe Semantic Version Parsing
-    def parse_v(v):
-        clean = ''.join(c if c.isdigit() or c == '.' else ' ' for c in v).strip().replace(' ', '.')
-        return [int(x) for x in clean.split('.') if x.isdigit()]
-        
-    local_v = parse_v(local_str)
-
-    req = urllib.request.Request('https://raw.githubusercontent.com/noqokhxnh/lucretia/main/updates.json')
-    res = urllib.request.urlopen(req, timeout=5)
-    data = json.loads(res.read().decode())
-
-    valid_videos = []
-    for item in data.get('videos', []):
-        target_v = parse_v(item['version'])
-        # Only grab videos for versions newer than what the user currently has installed
-        if target_v > local_v:
-            valid_videos.append((target_v, item['url']))
-
-    if valid_videos:
-        valid_videos.sort(key=lambda x: x[0])
-        url = valid_videos[-1][1] # Play the newest feature video they missed
-        
-        # Verify the video URL is actually alive before expanding the UI
-        head = urllib.request.Request(url, method='HEAD')
-        head_res = urllib.request.urlopen(head, timeout=5)
-        if head_res.getcode() in [200, 301, 302]:
-            print(url)
-except Exception:
-    pass
-`
-
     Process {
         id: videoResolveProcess
         running: false
-        command: ["python3", "-c", window.videoResolveScript]
+        command: [window.updaterBin, "--video"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let url = this.text ? this.text.trim() : "";
@@ -202,75 +166,10 @@ except Exception:
     }
 
     // --- 5. COMMIT LOG FETCH ---
-    property string fetchScript: `
-import urllib.request, json, subprocess
-
-repo = 'noqokhxnh/lucretia'
-
-try:
-    local = subprocess.check_output("source ~/.local/state/lucretia-version 2>/dev/null && echo $LOCAL_VERSION", shell=True).decode('utf-8').strip()
-except:
-    local = ''
-
-if not local:
-    local = '0.0.0'
-
-def get_latest():
-    try:
-        req = urllib.request.Request('https://api.github.com/repos/' + repo + '/commits/main', headers={'User-Agent': 'updater'})
-        res = urllib.request.urlopen(req, timeout=5)
-        print(json.loads(res.read().decode())['commit']['message'])
-    except Exception: print('No changelog available')
-
-try:
-    if local in ['0.0.0', '...', '']: 
-        get_latest()
-    else:
-        req_commits = urllib.request.Request('https://api.github.com/repos/' + repo + '/commits?path=install.sh&per_page=15', headers={'User-Agent': 'updater'})
-        res_commits = urllib.request.urlopen(req_commits, timeout=5)
-        file_commits = json.loads(res_commits.read().decode())
-        
-        local_sha = None
-        for c in file_commits:
-            sha = c['sha']
-            try:
-                raw_req = urllib.request.Request('https://raw.githubusercontent.com/' + repo + '/' + sha + '/install.sh', headers={'User-Agent': 'updater'})
-                raw_res = urllib.request.urlopen(raw_req, timeout=5)
-                content = raw_res.read().decode('utf-8')
-                
-                for line in content.splitlines():
-                    if line.startswith('DOTS_VERSION='):
-                        ver = line.split('=', 1)[1].strip().strip('"\\'')
-                        if ver == local:
-                            local_sha = sha
-                        break
-            except: pass
-            
-            if local_sha:
-                break
-                
-        if local_sha:
-            compare_req = urllib.request.Request('https://api.github.com/repos/' + repo + '/compare/' + local_sha + '...main', headers={'User-Agent': 'updater'})
-            compare_res = urllib.request.urlopen(compare_req, timeout=5)
-            data = json.loads(compare_res.read().decode())
-            commits = data.get('commits', [])
-            
-            if commits:
-                for c in reversed(commits):
-                    print(c['commit']['message'])
-                    print('---SPLIT---')
-            else:
-                get_latest()
-        else:
-            get_latest()
-except Exception as e:
-    get_latest()
-`
-
     Process {
         id: commitFetchProcess
         running: false
-        command: ["python3", "-c", window.fetchScript]
+        command: [window.updaterBin, "--commits"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let out = this.text ? this.text.trim() : "";
