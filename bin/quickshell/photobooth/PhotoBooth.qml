@@ -229,7 +229,7 @@ Item {
         }
         imageCapture: ImageCapture {
             id: imageCapture
-            // Manual refresh handled in singleShot/stitchBurst
+            onFileSaved: { addCaptureToRoll(path) }
         }
         recorder: MediaRecorder {
             id: recorder
